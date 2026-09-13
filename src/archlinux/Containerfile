@@ -1,0 +1,53 @@
+ARG ARCH_IMAGE=docker.io/archlinux/archlinux:base-20260901.0.583369@sha256:8c609bcd092b9b5024a57b26134c35db6a9d78915b7806b71e6dd709c38d5498
+
+FROM ${ARCH_IMAGE} AS base
+
+ARG VERSION=unknown
+ARG REVISION=unknown
+
+LABEL org.opencontainers.image.title="Methodic Games Arch Linux base"
+LABEL org.opencontainers.image.description="Snapshot-pinned minimal Arch Linux environment"
+LABEL org.opencontainers.image.source="https://github.com/methodicgames/containers"
+LABEL org.opencontainers.image.documentation="https://github.com/methodicgames/containers#usage"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${REVISION}"
+LABEL games.methodic.containers.variant="base"
+
+USER root
+
+RUN printf '%s\n' \
+        'Server = https://archive.archlinux.org/repos/2026/09/01/$repo/os/$arch' \
+        > /etc/pacman.d/mirrorlist \
+    && pacman -Syyuu --noconfirm \
+    && printf 'y\ny\n' | pacman -Scc
+
+FROM base AS dev
+
+LABEL org.opencontainers.image.title="Methodic Games Arch Linux development"
+LABEL org.opencontainers.image.description="Arch Linux build environment for development and Actions jobs"
+LABEL games.methodic.containers.variant="dev"
+
+RUN pacman -S --needed --noconfirm \
+        7zip \
+        actionlint \
+        b3sum \
+        base-devel \
+        ca-certificates \
+        curl \
+        git \
+        git-lfs \
+        github-cli \
+        jq \
+        just \
+        nodejs \
+        nushell \
+        nvchecker \
+        openssh \
+        reuse \
+        rumdl \
+        tar \
+        tea \
+        unzip \
+        zip \
+        zstd \
+    && printf 'y\ny\n' | pacman -Scc

@@ -1,0 +1,21 @@
+version = 1
+
+[[annotations]]
+path = [
+  ".editorconfig",
+  ".gitattributes",
+  ".github/**",
+  ".gitignore",
+  ".rumdl.toml",
+  "AGENTS.md",
+  "CONTRIBUTING.md",
+  "README.md",
+  "bin/**",
+  "doc/**",
+  "justfile",
+  "src/**",
+  "tests/**",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Methodic Games LLC"
+SPDX-License-Identifier = "0BSD"

@@ -1,0 +1,124 @@
+name: Containers
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "archlinux/base-*"
+      - "archlinux/dev-*"
+
+permissions: {}
+
+jobs:
+  validate:
+    name: Validate
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: nu {0}
+    env:
+      REVISION: ${{ github.sha }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Install Nushell
+        uses: hustcer/setup-nu@9215c80adb545a85c419d5085b76eb6d082f49e7 # v3.27
+        with:
+          version: "0.115.1"
+
+      - name: Install Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+        with:
+          just-version: "1.58.0"
+
+      - name: Check Out Repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Validate
+        run: just validate
+
+  publish:
+    name: Publish
+    concurrency:
+      group: archlinux-publish-${{ startsWith(github.ref_name, 'archlinux/base-') && 'base' || 'dev' }}
+      queue: max
+      cancel-in-progress: false
+    if: startsWith(github.ref, 'refs/tags/archlinux/')
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: nu {0}
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    outputs:
+      digest: ${{ steps.publication.outputs.digest }}
+      date: ${{ steps.release.outputs.date }}
+      revision: ${{ steps.release.outputs.revision }}
+      variant: ${{ steps.release.outputs.variant }}
+      version: ${{ steps.release.outputs.version }}
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Install Nushell
+        uses: hustcer/setup-nu@9215c80adb545a85c419d5085b76eb6d082f49e7 # v3.27
+        with:
+          version: "0.115.1"
+
+      - name: Install Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+        with:
+          just-version: "1.58.0"
+
+      - name: Check Out Repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate Release
+        id: release
+        env:
+          TAG_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: just validate-release $env.RELEASE_TAG
+
+      - name: Log In to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USERNAME: ${{ github.actor }}
+        run: $env.GHCR_TOKEN | podman login ghcr.io --username $env.GHCR_USERNAME --password-stdin
+
+      - name: Publish or Resume and Verify Anonymously
+        id: publication
+        env:
+          RELEASE_VARIANT: ${{ steps.release.outputs.variant }}
+          REVISION: ${{ steps.release.outputs.revision }}
+        run: just publish $env.RELEASE_VARIANT
+
+  actions-job-smoke:
+    name: GitHub Actions Job Container
+    if: startsWith(github.ref, 'refs/tags/archlinux/') && needs.publish.outputs.variant == 'dev'
+    needs: publish
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: nu {0}
+    container:
+      image: ghcr.io/methodicgames/archlinux@${{ needs.publish.outputs.digest }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Verify Job Container
+        run: just smoke-job

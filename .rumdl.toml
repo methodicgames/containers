@@ -1,0 +1,15 @@
+[global]
+line-length = 71
+flavor = "gfm"
+extend-enable = ["MD060"]
+cache-dir = ".tmp/cache/rumdl"
+
+[MD013]
+line-length = 71
+code-blocks = false
+tables = false
+reflow = true
+reflow-mode = "normalize"
+
+[MD060]
+style = "aligned"
