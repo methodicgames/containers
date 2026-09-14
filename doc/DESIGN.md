@@ -13,7 +13,7 @@
 - `bin/smoke.nu` orchestrates image checks; `bin/runtime-checks.nu`
   runs tool and package checks inside an image.
 - `tests/` owns named automation scenarios and their fixtures.
-- `.github/workflows/containers.yml` selects when the public commands
+- `.github/workflows/containers.yaml` selects when the public commands
   run on GitHub Actions.
 - `README.md` is the user-facing reference; `CONTRIBUTING.md` is the
   contributor-facing reference.
