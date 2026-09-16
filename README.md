@@ -10,10 +10,12 @@ variants:
 
 - `base` is a minimal, snapshot-pinned Arch Linux environment.
 - `dev` adds general build and archive tools, including 7-Zip, Git LFS,
-  `nvchecker` for release checks, the `b3sum` checksum utility, GitHub
-  and Gitea CLIs, and a Node.js runtime for development and GitHub or
-  Gitea Actions jobs. Interactive tooling remains the host's
-  responsibility, and the image does not include `npm`.
+  Biome, `check-jsonschema`, the C3 compiler, Emscripten, `nvchecker`
+  for release checks, the `b3sum` checksum utility, GitHub and Gitea
+  CLIs, and a Node.js runtime for development and GitHub or Gitea
+  Actions jobs. Emscripten commands are available on the image's
+  `PATH`, including in non-login shells. Interactive tooling remains
+  the host's responsibility, and the image does not include `npm`.
 
 Both variants are pinned to a dated Arch Linux Archive snapshot and an
 immutable upstream image tag and digest.

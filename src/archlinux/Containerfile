@@ -32,8 +32,12 @@ RUN pacman -S --needed --noconfirm \
         actionlint \
         b3sum \
         base-devel \
+        biome \
+        c3c \
         ca-certificates \
+        check-jsonschema \
         curl \
+        emscripten \
         git \
         git-lfs \
         github-cli \
@@ -52,3 +56,15 @@ RUN pacman -S --needed --noconfirm \
         zstd \
     && git lfs install --system --skip-smudge --skip-repo \
     && printf 'y\ny\n' | pacman -Scc
+
+# Derive the tools directory from the package profile for non-login processes.
+RUN original_path="$PATH" \
+    && . /etc/profile.d/emscripten.sh \
+    && emscripten_path="${PATH#"$original_path":}" \
+    && test "$emscripten_path" != "$PATH" \
+    && test "${emscripten_path#*:}" = "$emscripten_path" \
+    && test -x "$emscripten_path/emcc" \
+    && mkdir -p /usr/local/lib \
+    && ln -s "$emscripten_path" /usr/local/lib/emscripten
+
+ENV PATH="${PATH}:/usr/local/lib/emscripten"

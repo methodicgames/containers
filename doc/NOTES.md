@@ -38,3 +38,17 @@ jobs. It intentionally omits `npm`, pagers, manual pages, shell
 completion, file finders, and other tools expected to remain the host's
 responsibility. Smoke tests enforce both the required and intentionally
 absent inventories.
+
+## Emscripten Command Path
+
+Arch's Emscripten package supplies `/etc/profile.d/emscripten.sh` to
+append its tools directory to `PATH`. Direct container commands and
+non-login shells do not automatically source that script.
+
+The development image sources the packaged script during its build,
+links the resulting tools directory at `/usr/local/lib/emscripten`, and
+adds that stable path to the image environment. Package updates that
+move the tools directory therefore follow the package's profile without
+requiring a source change. The build checks that the profile appends
+exactly one directory containing an executable `emcc`; a change to that
+contract fails the build for review.
