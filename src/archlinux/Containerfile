@@ -1,4 +1,4 @@
-ARG ARCH_IMAGE=docker.io/archlinux/archlinux:base-20260901.0.583369@sha256:8c609bcd092b9b5024a57b26134c35db6a9d78915b7806b71e6dd709c38d5498
+ARG ARCH_IMAGE=docker.io/archlinux/archlinux:base-20260915.0.594185@sha256:d5eece8a54625240d98d9d5e3595f53137b2329d87016d3182a4a11b86dee77a
 
 FROM ${ARCH_IMAGE} AS base
 
@@ -16,7 +16,7 @@ LABEL games.methodic.containers.variant="base"
 USER root
 
 RUN printf '%s\n' \
-        'Server = https://archive.archlinux.org/repos/2026/09/01/$repo/os/$arch' \
+        'Server = https://archive.archlinux.org/repos/2026/09/15/$repo/os/$arch' \
         > /etc/pacman.d/mirrorlist \
     && pacman -Syyuu --noconfirm \
     && printf 'y\ny\n' | pacman -Scc
@@ -50,4 +50,5 @@ RUN pacman -S --needed --noconfirm \
         unzip \
         zip \
         zstd \
+    && git lfs install --system --skip-smudge --skip-repo \
     && printf 'y\ny\n' | pacman -Scc
