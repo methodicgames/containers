@@ -37,6 +37,7 @@ RUN pacman -S --needed --noconfirm \
         ca-certificates \
         check-jsonschema \
         curl \
+        dotnet-sdk-10.0 \
         emscripten \
         git \
         git-lfs \
