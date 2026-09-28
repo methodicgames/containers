@@ -58,6 +58,11 @@ RUN pacman -S --needed --noconfirm \
     && git lfs install --system --skip-smudge --skip-repo \
     && printf 'y\ny\n' | pacman -Scc
 
+RUN dotnet tool install --global JetBrains.dotCover.CommandLineTools --version 2026.2.1 \
+    && dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.1 \
+    && dotnet tool install --global JetBrains.dotTrace.GlobalTools --version 2026.2.0.1 \
+    && dotnet tool install --global JetBrains.Refasmer.CliTool --version 2.0.3
+
 # Derive the tools directory from the package profile for non-login processes.
 RUN original_path="$PATH" \
     && . /etc/profile.d/emscripten.sh \
@@ -68,4 +73,4 @@ RUN original_path="$PATH" \
     && mkdir -p /usr/local/lib \
     && ln -s "$emscripten_path" /usr/local/lib/emscripten
 
-ENV PATH="${PATH}:/usr/local/lib/emscripten"
+ENV PATH="${PATH}:/usr/local/lib/emscripten:/root/.dotnet/tools"

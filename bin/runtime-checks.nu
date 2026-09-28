@@ -22,8 +22,9 @@ def main [] {
 def "main dev" [] {
     let required_commands = [
         7z actionlint b3sum biome bsdcpio bsdtar c3c check-jsonschema curl dotnet
-        emcc em++ emar emcmake emconfigure emmake emranlib gcc gh git git-lfs jq
-        just make node nu nvchecker reuse rumdl ssh tar tea unzip zip zstd
+        dotCover dottrace emcc em++ emar emcmake emconfigure emmake emranlib gcc gh
+        git git-lfs jb jq just make node nu nvchecker refasmer reuse rumdl ssh tar
+        tea unzip zip zstd
     ]
     for command in $required_commands {
         require-command $command
@@ -58,13 +59,17 @@ def "main job" [] {
     ^c3c --version
     ^check-jsonschema --version
     ^dotnet --version
+    ^dotCover help
+    ^dottrace --help
     ^emcc --version
     ^gh --version
     ^node --version
     ^git --version
     ^git lfs version
     ^just --version
+    ^jb inspectcode --version
     ^nu --version
     ^nvchecker --version
+    ^refasmer --help
     ^tea --version
 }
