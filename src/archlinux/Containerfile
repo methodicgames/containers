@@ -36,6 +36,7 @@ RUN pacman -S --needed --noconfirm \
         c3c \
         ca-certificates \
         check-jsonschema \
+        clang \
         curl \
         dotnet-sdk-10.0 \
         emscripten \
