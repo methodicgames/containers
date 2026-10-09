@@ -20,11 +20,11 @@ source.
 
 Focused source linting requires Git, Just, Nushell, Rumdl, REUSE, and
 actionlint. The canonical validation gate additionally requires
-rootless Podman, tar, `curl`, and OpenSSH's `ssh-keygen`, and uses the
-built `dev` image for the full lint toolchain. Release-tag tests sign
-with disposable keys. Publication integration tests pull a
-digest-pinned registry image and bind a disposable instance to a random
-loopback port. Updating the Arch snapshot requires network access.
+rootless Podman, tar, and OpenSSH's `ssh-keygen`, and uses the built
+`dev` image for the full lint toolchain. Release-tag tests sign with
+disposable keys. Publication integration tests pull a digest-pinned
+registry image and bind a disposable instance to a random loopback
+port. Updating the Arch snapshot requires `curl` and network access.
 
 No dependency-installation step is required. Confirm the tools are
 available, then inspect the public commands with:
