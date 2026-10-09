@@ -6,6 +6,9 @@
   `src/archlinux/VERSION` as one coordinated input. Update them through
   `just update-arch`, then follow `doc/RELEASING.md` to select the
   earliest snapshot that upgrades without package downgrades.
+- Pin each .NET global tool in the `dev` stage to an exact NuGet
+  version. The tools are independent inputs; update each one separately
+  when needed, without coordinating their versions.
 - Keep the disposable registry test image pinned by both version and
   digest.
 - Pin third-party Actions to full commit IDs with readable release
