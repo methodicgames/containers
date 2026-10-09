@@ -166,8 +166,8 @@ that revision beneath `.tmp/release-smoke/` and runs only its
 image. Current publication code still controls registry inspection,
 alias updates, and anonymous verification. To test a locally available
 release image independently, run
-`just smoke-release RELEASE_TAG REVISION` with its full tagged commit
-ID; this command honors `IMAGE`.
+`just smoke-release RELEASE_TAG TAGGED_COMMIT` with its full tagged
+commit ID; this command honors `IMAGE`.
 
 Keep production publication in the serialized release workflow. Manual
 `just publish` invocations require the original `RELEASE_TAG`, tagged
