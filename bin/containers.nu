@@ -114,6 +114,18 @@ def validate-revision [revision: string] {
     }
 }
 
+# Release images record REVISION, so build them only from that clean commit.
+def check-release-source [revision: string] {
+    let status = (^git status --porcelain | str trim)
+    if not ($status | is-empty) {
+        fail 'release builds require a clean worktree'
+    }
+    let head = (^git rev-parse HEAD | str trim)
+    if $revision != $head {
+        fail 'release builds require REVISION to be the checked-out commit'
+    }
+}
+
 def markdown-files [] {
     ^git ls-files --cached --others --exclude-standard -- '*.md'
     | lines
@@ -420,6 +432,9 @@ def "main release" [release_tag: string] {
 
 def "main build" [requested: string = 'all'] {
     let image_context = (image-context 'local')
+    if $image_context.release != null {
+        check-release-source $image_context.revision
+    }
     for target in (variants $requested) {
         (
             ^podman build
@@ -538,6 +553,7 @@ def "main publish" [requested: string = 'all'] {
         fail 'publication requires REVISION as a full Git object ID'
     }
     publication-variants $requested $image_context.release.variant | ignore
+    check-release-source $image_context.revision
 
     let expected = {
         image: $image_context.image

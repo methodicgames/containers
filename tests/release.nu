@@ -202,6 +202,29 @@ def signature-rejections [] {
     assert equal (release-output $fixture) {}
 }
 
+# Both commands must reject the source before building or contacting a registry.
+def release-build-source [] {
+    let fixture = (release-fixture)
+    load-env $fixture.env
+    cd $fixture.source
+    let head = (^git rev-parse HEAD | str trim)
+    let release = {RELEASE_TAG: 'archlinux/dev-2000.01.01-1', REVISION: $head}
+
+    for command in [[build dev] [publish dev]] {
+        'draft' | save untracked.txt
+        with-env $release {
+            fails (run-automation $fixture ...$command) 'require a clean worktree'
+        }
+        rm untracked.txt
+
+        local-commit
+        with-env $release {
+            fails (run-automation $fixture ...$command) 'require REVISION to be the checked-out commit'
+        }
+        ^git reset --quiet --hard $head
+    }
+}
+
 def untrusted-release-key [] {
     let fixture = (release-fixture)
     load-env $fixture.env
@@ -220,6 +243,7 @@ def main [] {
         'verified release metadata': { verified-release }
         'release tag rejections': { release-tag-rejections }
         'signature rejections': { signature-rejections }
+        'release build source': { release-build-source }
         'untrusted release key': { untrusted-release-key }
     }
 }

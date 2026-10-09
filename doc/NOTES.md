@@ -28,7 +28,9 @@ omit the `archlinux/` prefix.
 Published images use `YYYY.MM.DD-N` as their version and record the
 tagged Git commit as their revision. Unreleased local builds use
 `local` as their version and, unless `REVISION` is set, their revision.
-Publication requires `RELEASE_TAG`.
+Publication requires `RELEASE_TAG`. Builds with `RELEASE_TAG` set and
+publication require a clean worktree whose `HEAD` is `REVISION`, so a
+release image cannot record a revision other than its source.
 
 ## Root Identity
 
