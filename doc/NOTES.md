@@ -36,8 +36,9 @@ user namespace and does not grant host root privileges.
 The `dev` image contains tools needed for builds and non-interactive
 jobs. It intentionally omits `npm`, pagers, manual pages, shell
 completion, file finders, and other tools expected to remain the host's
-responsibility. Smoke tests enforce both the required and intentionally
-absent inventories.
+responsibility. `tmux` is included as a job tool for driving terminal
+programs, not as host-oriented interactive tooling. Smoke tests enforce
+both the required and intentionally absent inventories.
 
 ## Emscripten Command Path
 

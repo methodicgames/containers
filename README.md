@@ -13,12 +13,13 @@ variants:
   Biome, `check-jsonschema`, Clang, the C3 compiler, the .NET 10 SDK,
   JetBrains dotCover, ReSharper command-line tools, dotTrace, Refasmer,
   Emscripten, `nvchecker` for release checks, the `b3sum` checksum
-  utility, GitHub and Gitea CLIs, and a Node.js runtime for development
-  and GitHub or Gitea Actions jobs. Emscripten commands are available
-  on the image's `PATH`, including in non-login shells. The .NET global
-  tools are installed for container root, and `/root/.dotnet/tools` is
-  also on `PATH`. Interactive tooling remains the host's
-  responsibility, and the image does not include `npm`.
+  utility, GitHub and Gitea CLIs, `tmux` for driving terminal programs
+  in jobs, and a Node.js runtime for development and GitHub or Gitea
+  Actions jobs. Emscripten commands are available on the image's
+  `PATH`, including in non-login shells. The .NET global tools are
+  installed for container root, and `/root/.dotnet/tools` is also on
+  `PATH`. Interactive tooling remains the host's responsibility, and
+  the image does not include `npm`.
 
 Both variants are pinned to a dated Arch Linux Archive snapshot and an
 immutable upstream image tag and digest.

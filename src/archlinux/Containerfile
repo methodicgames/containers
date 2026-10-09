@@ -53,6 +53,7 @@ RUN pacman -S --needed --noconfirm \
         rumdl \
         tar \
         tea \
+        tmux \
         unzip \
         zip \
         zstd \
