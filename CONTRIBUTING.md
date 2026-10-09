@@ -114,10 +114,11 @@ just format
 ```
 
 Use title case for document headings, table column headings, and
-human-readable workflow and step names. Preserve proper names,
-acronyms, code identifiers, and required literal headings. Review
-formatting changes before committing. Text files end with exactly one
-newline.
+human-readable workflow and step names. Capitalize major words;
+lowercase articles, coordinating conjunctions, and prepositions unless
+they begin or end the title. Preserve proper names, acronyms, code
+identifiers, and required literal headings. Review formatting changes
+before committing. Text files end with exactly one newline.
 
 ### Language Quality Tools
 
@@ -174,10 +175,9 @@ Review the intended diff and run `git diff --check` for every change.
 
 Keep commits focused and use Conventional Commits. Limit subjects to 50
 characters and body and footer lines to 71 characters. Stage only
-reviewed scope, preserve configured identity and signing, obtain
-approval for the exact staged state and message, and verify signed
-commits after creation. A completed change does not authorize a commit
-or push.
+reviewed scope, preserve configured identity and signing, and verify
+signed commits after creation. Completion of implementation does not
+authorize an agent to commit or push.
 
 Only a valid release-tag push publishes images. Follow
 [the release procedure](doc/RELEASING.md) to prepare, publish, verify,

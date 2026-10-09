@@ -49,6 +49,12 @@ relevant.
   repository-authored source only. Do not imply that software installed
   in an image uses that license.
 
+## Commits
+
+Obtain user approval for the exact staged state and message before
+creating a commit. A completed change does not authorize a commit or
+push.
+
 ## Comments and Documentation
 
 Do not create unnecessary cross-reference maintenance burden: avoid
