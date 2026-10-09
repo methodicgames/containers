@@ -110,7 +110,17 @@ def run-with-source [image_ref: string, source: path, command: list<string>] {
     )
 }
 
+def check-tool-store [image_ref: string] {
+    let archive = (run-image-check $image_ref [
+        'find' '/root/.dotnet/tools/.store' '-name' '*.nupkg' '-print' '-quit'
+    ] $"($image_ref) cannot inspect its .NET tool store")
+    if $archive != '' {
+        error make {msg: $"($image_ref) retains .NET tool package archives"}
+    }
+}
+
 def check-development-image [image_ref: string, source: path] {
+    check-tool-store $image_ref
     run-with-source $image_ref $source [
         'nu' '--no-config-file' 'bin/runtime-checks.nu' 'dev'
     ]

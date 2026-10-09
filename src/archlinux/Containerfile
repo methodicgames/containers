@@ -65,10 +65,12 @@ RUN pacman -S --needed --noconfirm \
     && git lfs install --system --skip-smudge --skip-repo \
     && printf 'y\ny\n' | pacman -Scc
 
+# Installed tools do not read the package archives retained in their store.
 RUN dotnet tool install --global JetBrains.dotCover.CommandLineTools --version 2026.2.3.1 \
     && dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.3.1 \
     && dotnet tool install --global JetBrains.dotTrace.GlobalTools --version 2026.2.3.1 \
-    && dotnet tool install --global JetBrains.Refasmer.CliTool --version 2.0.3
+    && dotnet tool install --global JetBrains.Refasmer.CliTool --version 2.0.3 \
+    && find /root/.dotnet/tools/.store -name '*.nupkg' -delete
 
 # Derive the tools directory from the package profile for non-login processes.
 RUN original_path="$PATH" \
