@@ -20,8 +20,8 @@ SPDX-License-Identifier: 0BSD
 - `bin/smoke.nu` orchestrates image checks; `bin/runtime-checks.nu`
   runs tool and package checks inside an image.
 - `tests/` owns named automation scenarios and their fixtures.
-- `.github/workflows/containers.yaml` selects when the public commands
-  run on GitHub Actions.
+- `.github/workflows/` selects when the public commands run on GitHub
+  Actions.
 - `.git-signers` lists the SSH keys trusted to sign release tags.
 - `README.md` is the user-facing reference; `CONTRIBUTING.md` is the
   contributor-facing reference.
