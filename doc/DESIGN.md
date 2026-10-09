@@ -22,6 +22,7 @@ SPDX-License-Identifier: 0BSD
 - `tests/` owns named automation scenarios and their fixtures.
 - `.github/workflows/containers.yaml` selects when the public commands
   run on GitHub Actions.
+- `.git-signers` lists the SSH keys trusted to sign release tags.
 - `README.md` is the user-facing reference; `CONTRIBUTING.md` is the
   contributor-facing reference.
 - `doc/RELEASING.md` owns release and recovery procedures.
@@ -57,12 +58,16 @@ Pull requests and relevant pushes to `main` run the canonical gate on
 the Actions runner with read-only repository permission. A matching
 release-tag push starts the publication job, the only job with
 registry-write permission. It validates the variant's release sequence,
-signature, and ancestry before authenticating to GHCR. Publication is
-serialized per variant across snapshot dates, with queued runs and no
-cancellation of an active publisher. The first successful versioned
-manifest is authoritative; retries validate its metadata and resume
-from that digest. Only a structured missing-manifest response allows an
-initial upload. Authentication failures and transport errors stop work.
+signature, and ancestry before authenticating to GHCR. The signature
+must come from a key listed in `.git-signers` on `origin/main`, so
+release trust follows reviewed history rather than every key a hosting
+account has registered, and removing a key there revokes it for later
+publication runs. Publication is serialized per variant across snapshot
+dates, with queued runs and no cancellation of an active publisher. The
+first successful versioned manifest is authoritative; retries validate
+its metadata and resume from that digest. Only a structured
+missing-manifest response allows an initial upload. Authentication
+failures and transport errors stop work.
 
 Publication inspects both aliases before changing either. Date aliases
 advance by sequence within their date; floating aliases advance by date

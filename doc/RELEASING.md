@@ -31,8 +31,14 @@ build-job number, not a package release number for downstream images.
 Prepare releases from a clean `main` worktree that exactly matches live
 `origin/main`. The release process requires Git, Just, Nushell, tar,
 rootless Podman, and network access. Creating the tag uses the
-configured signing identity. Publication requires registry
-authentication and runs through GitHub Actions in production.
+configured SSH signing identity, whose public key must be listed in
+`.git-signers` on `main`. Publication requires registry authentication
+and runs through GitHub Actions in production.
+
+To add, rotate, or revoke a release signer, change `.git-signers` in a
+reviewed commit on `main` before tagging. Publication reads the file
+from `origin/main`, so a removed key also stops reruns of tags it
+signed.
 
 The snapshot source, upstream image tag and digest, Archive URL, and
 release date must remain synchronized. `src/archlinux/VERSION` is the
@@ -68,15 +74,17 @@ just release archlinux/dev-2026.09.01-1
 
 The recipe checks that the worktree is clean and synchronized, the tag
 date matches `src/archlinux/VERSION`, and the selected variant's
-per-snapshot sequence starts at `1` and has no gaps. It creates and
-verifies a signed annotated tag, then prints the explicit push command.
-It never pushes the tag itself.
+per-snapshot sequence starts at `1` and has no gaps. It creates a
+signed annotated tag, verifies it against `.git-signers`, and deletes
+it again if verification fails. On success, it prints the explicit push
+command; it never pushes the tag itself.
 
 ## Publish
 
 After reviewing the tag, push it using the command printed by
 `just release`. GitHub Actions independently validates its syntax,
-sequence, annotation, signature, and ancestry from `origin/main` before
+sequence, annotation, and ancestry from `origin/main`, and verifies its
+SSH signature against `.git-signers` on `origin/main`, before
 authenticating to GHCR. Pull requests and pushes to `main` validate but
 never publish.
 

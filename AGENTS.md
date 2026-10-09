@@ -43,6 +43,8 @@ relevant.
 - `/.github/workflows/`: Invoke Just recipes rather than reimplementing
   them. Pull requests and `main` pushes must never publish. Only a
   valid, explicitly pushed signed release tag may publish images.
+- `/.git-signers`: Trusted release-signer SSH keys. Change only with
+  explicit user approval.
 - `/LICENSE` and `/REUSE.toml`: The 0BSD license covers
   repository-authored source only. Do not imply that software installed
   in an image uses that license.

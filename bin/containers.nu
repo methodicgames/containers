@@ -58,6 +58,35 @@ def remote-release-tags [variant: string, date: string] {
         }
 }
 
+# Trust comes from .git-signers at a reviewed ref, not from the tag's own tree,
+# so removing a key on main revokes it for later publication runs.
+def release-signature-error [tag_ref: string, trusted_ref: string] {
+    let tag = ($tag_ref | str replace 'refs/tags/' '')
+    let signers = (^git show $"($trusted_ref):.git-signers" | complete)
+    if $signers.exit_code != 0 {
+        return $"($trusted_ref) does not define .git-signers"
+    }
+    let content = (^git cat-file tag $tag_ref)
+    if not ($content | str contains '-----BEGIN SSH SIGNATURE-----') {
+        return $"release tag ($tag) must have an SSH signature"
+    }
+
+    let directory = ('.tmp/release-signers' | path join (random uuid) | path expand)
+    let allowed_signers = ($directory | path join 'allowed-signers')
+    mkdir $directory
+    $signers.stdout | save $allowed_signers
+    let result = (
+        ^git -c $"gpg.ssh.allowedSignersFile=($allowed_signers)" verify-tag $tag_ref
+        | complete
+    )
+    rm --recursive --force $directory
+    if $result.exit_code != 0 {
+        print --stderr ($result.stderr | str trim)
+        return $"release tag ($tag) is not signed by a key in ($trusted_ref):.git-signers"
+    }
+    null
+}
+
 # Capture repository and environment inputs once at the command boundary.
 def image-context [revision_default: string] {
     let snapshot = (open --raw src/archlinux/VERSION | str trim)
@@ -305,17 +334,11 @@ def "main validate-release" [release_tag: string] {
         fail $"release tag ($release.tag) does not target a commit on origin/main"
     }
 
-    let tag_object = (^git rev-parse $tag_ref | str trim)
-    let metadata = (
-        ^curl --fail --silent --show-error
-            --header 'Accept: application/vnd.github+json'
-            --header $"Authorization: Bearer ($env.TAG_API_TOKEN)"
-            --header 'X-GitHub-Api-Version: 2026-03-10'
-            $"($env.GITHUB_API_URL)/repos/($env.GITHUB_REPOSITORY)/git/tags/($tag_object)"
-        | from json
+    let signature_error = (
+        release-signature-error $tag_ref refs/remotes/origin/main
     )
-    if not $metadata.verification.verified {
-        fail $"GitHub did not verify the release-tag signature: ($metadata.verification.reason)"
+    if $signature_error != null {
+        fail $signature_error
     }
 
     let outputs = [
@@ -386,7 +409,14 @@ def "main release" [release_tag: string] {
     }
 
     ^git tag --sign --annotate $release.tag --message $"Release ($release.version)"
-    ^git verify-tag $release.tag
+    # HEAD matches live origin/main, so this applies the signers publication trusts.
+    let signature_error = (
+        release-signature-error $"refs/tags/($release.tag)" HEAD
+    )
+    if $signature_error != null {
+        ^git tag --delete $release.tag | ignore
+        fail $signature_error
+    }
     print $"Created ($release.tag); push it with:"
     print $"git push origin refs/tags/($release.tag)"
 }

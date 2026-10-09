@@ -5,22 +5,24 @@
 use std/assert
 use support.nu *
 
-const repository = 'methodicgames/containers'
-
-# A disposable repository and bare origin with isolated Git configuration and
-# a throwaway SSH signing key. Callers load its environment before using Git.
+# A disposable repository and bare origin with isolated Git configuration,
+# a throwaway trusted SSH signing key, and an untrusted one. Callers load its
+# environment before using Git.
 def release-fixture [] {
     let automation = ('bin/containers.nu' | path expand)
     let directory = (test-directory 'release-tests')
     let origin = ($directory | path join 'origin.git')
     let source = ($directory | path join 'repository')
     let key = ($directory | path join 'signing-key')
+    let untrusted_key = ($directory | path join 'untrusted-key')
     let signers = ($directory | path join 'allowed-signers')
     let config = ($directory | path join 'gitconfig')
 
     ^ssh-keygen -q -t ed25519 -N '' -C release-test -f $key
+    ^ssh-keygen -q -t ed25519 -N '' -C untrusted-test -f $untrusted_key
     let public_key = (open --raw $"($key).pub" | str trim)
-    $"release@example.invalid namespaces=\"git\" ($public_key)\n" | save $signers
+    let signer = $"release@example.invalid namespaces=\"git\" ($public_key)\n"
+    $signer | save $signers
 
     let git_env = {GIT_CONFIG_GLOBAL: $config, GIT_CONFIG_NOSYSTEM: '1'}
     load-env $git_env
@@ -38,7 +40,8 @@ def release-fixture [] {
     ^git remote add origin $origin
     mkdir src/archlinux
     "20000101\n" | save src/archlinux/VERSION
-    ^git add -- src/archlinux/VERSION
+    $signer | save .git-signers
+    ^git add -- src/archlinux/VERSION .git-signers
     ^git commit --quiet --message 'Release fixture'
     ^git push --quiet origin main
 
@@ -46,11 +49,9 @@ def release-fixture [] {
         automation: $automation
         directory: $directory
         source: $source
+        untrusted_key: $untrusted_key
         env: ($git_env | merge {
-            GITHUB_API_URL: $"file://($directory | path join 'api')"
             GITHUB_OUTPUT: ($directory | path join 'github-output')
-            GITHUB_REPOSITORY: $repository
-            TAG_API_TOKEN: 'test-token'
         })
     }
 }
@@ -68,25 +69,15 @@ def fails [result: record, message: string] {
     assert ($result.stderr | str contains $message) $"unexpected failure: ($result.stderr)"
 }
 
-def signed-tag [tag: string] {
-    ^git tag --sign --annotate $tag --message $"Release ($tag)"
+def signed-tag [tag: string, --key: string] {
+    let options = if $key == null { [] } else { ['-c', $"user.signingKey=($key)"] }
+    ^git ...$options tag --sign --annotate $tag --message $"Release ($tag)"
 }
 
 def local-commit [] {
     'change' | save --force change.txt
     ^git add -- change.txt
     ^git commit --quiet --message 'Local change'
-}
-
-# Serve the GitHub tag-verification response that validate-release requests.
-def tag-verification [fixture: record, tag: string, verified: bool] {
-    let object = (^git rev-parse $"refs/tags/($tag)" | str trim)
-    let file = (
-        [$fixture.directory api repos $repository git tags $object] | path join
-    )
-    mkdir ($file | path dirname)
-    let reason = if $verified { 'valid' } else { 'unsigned' }
-    {verification: {verified: $verified, reason: $reason}} | to json | save $file
 }
 
 def release-output [fixture: record] {
@@ -160,7 +151,6 @@ def verified-release [] {
     let tag = 'archlinux/dev-2000.01.01-1'
 
     signed-tag $tag
-    tag-verification $fixture $tag true
     succeeds (run-automation $fixture validate-release $tag)
     assert equal (release-output $fixture) {
         date: '2000.01.01'
@@ -185,7 +175,6 @@ def release-tag-rejections [] {
 
     local-commit
     signed-tag 'archlinux/base-2000.01.01-1'
-    tag-verification $fixture 'archlinux/base-2000.01.01-1' true
     fails (run-automation $fixture validate-release 'archlinux/base-2000.01.01-1') 'does not target a commit on origin/main'
     assert equal (release-output $fixture) {}
 }
@@ -196,13 +185,31 @@ def signature-rejections [] {
     cd $fixture.source
     let tag = 'archlinux/dev-2000.01.01-1'
 
-    signed-tag $tag
-    let unavailable = (run-automation $fixture validate-release $tag)
-    assert ($unavailable.exit_code != 0) 'expected failure without a verification response'
+    ^git tag --annotate $tag --message 'Unsigned release'
+    fails (run-automation $fixture validate-release $tag) 'must have an SSH signature'
 
-    tag-verification $fixture $tag false
-    fails (run-automation $fixture validate-release $tag) 'did not verify the release-tag signature'
+    ^git tag --delete $tag | ignore
+    signed-tag $tag --key $fixture.untrusted_key
+    fails (run-automation $fixture validate-release $tag) 'is not signed by a key in refs/remotes/origin/main:.git-signers'
+
+    # Removing a signer from main revokes it for tags on earlier commits.
+    ^git tag --delete $tag | ignore
+    signed-tag $tag
+    '' | save --force .git-signers
+    ^git commit --quiet --all --message 'Revoke release signer'
+    ^git push --quiet origin main
+    fails (run-automation $fixture validate-release $tag) 'is not signed by a key in refs/remotes/origin/main:.git-signers'
     assert equal (release-output $fixture) {}
+}
+
+def untrusted-release-key [] {
+    let fixture = (release-fixture)
+    load-env $fixture.env
+    cd $fixture.source
+    ^git config --global user.signingKey $fixture.untrusted_key
+
+    fails (run-automation $fixture release 'archlinux/dev-2000.01.01-1') 'is not signed by a key in HEAD:.git-signers'
+    assert (^git tag --list | str trim | is-empty)
 }
 
 def main [] {
@@ -213,5 +220,6 @@ def main [] {
         'verified release metadata': { verified-release }
         'release tag rejections': { release-tag-rejections }
         'signature rejections': { signature-rejections }
+        'untrusted release key': { untrusted-release-key }
     }
 }

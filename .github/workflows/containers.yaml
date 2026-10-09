@@ -85,8 +85,6 @@ jobs:
 
       - name: Validate Release
         id: release
-        env:
-          TAG_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: just validate-release $env.RELEASE_TAG
 
       - name: Log In to GHCR
