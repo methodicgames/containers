@@ -19,6 +19,7 @@ test:
     nu --no-config-file tests/versions.nu
     nu --no-config-file tests/publication.nu
     nu --no-config-file tests/registry.nu
+    nu --no-config-file tests/release.nu
     nu --no-config-file tests/smoke-release.nu
 
 # Test manifest publication against a disposable rootless registry.
