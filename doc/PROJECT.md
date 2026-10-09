@@ -40,9 +40,22 @@
   environment. The published `dev` image remains a downstream
   development and Actions artifact, not a self-hosting environment for
   this repository.
-- `CI-005`: Do not generate a changelog or create hosted release
-  objects. Signed `archlinux/<variant>-YYYY.MM.DD-N` tags explicitly
-  version and publish individual OCI images, while focused Git history
-  remains the change record. Reconsider if the audience needs curated
-  release notes, a compatibility policy, or non-container release
-  artifacts.
+- `REL-001`, `REL-003`, and `REL-008`: Version each variant with signed
+  `archlinux/<variant>-YYYY.MM.DD-N` tags whose date is the Arch
+  Archive snapshot recorded in `src/archlinux/VERSION`, not the tagging
+  date, and whose `N` is that variant's gap-free sequence for the
+  snapshot. The snapshot fixes the packages an image contains, so its
+  date tells consumers which operating-system state they receive; the
+  published OCI tags derived from these Git tags are a public
+  interface. `src/archlinux/VERSION` is the snapshot input pin, not a
+  release counter. The maintainer decides when a variant's shipped
+  content warrants a release.
+- `REL-004`: Do not attribute commits to the `base` and `dev` streams
+  with trailers. No version derivation or changelog consumes such
+  attribution, and the maintainer selects which variants to release.
+  Reconsider if changelog generation is adopted.
+- `REL-005`: Do not generate a changelog or create hosted release
+  objects. Signed release tags explicitly version and publish
+  individual OCI images, while focused Git history remains the change
+  record. Reconsider if the audience needs curated release notes, a
+  compatibility policy, or non-container release artifacts.

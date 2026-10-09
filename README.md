@@ -106,6 +106,8 @@ versioning, publication, verification, and recovery procedures.
 
 ## License
 
+Copyright 2026 Methodic Games LLC.
+
 Repository-authored source is available under the
 [Zero-Clause BSD](LICENSE) license. Software installed in the images
 retains its own licensing terms. Copyright and licensing metadata

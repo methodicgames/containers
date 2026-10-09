@@ -167,7 +167,7 @@ def "main lint" [] {
     }
     ^reuse --no-multiprocessing lint
     # CHECK: Remove this exact diagnostic exception when actionlint supports queue.
-    # https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency#example-queueing-multiple-pending-runs
+    # https://github.com/rhysd/actionlint/issues/657
     (
         ^actionlint -ignore '^unexpected key "queue" for "concurrency" section[.] expected one of "cancel-in-progress", "group"$'
             .github/workflows/containers.yaml
