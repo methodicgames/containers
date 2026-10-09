@@ -57,11 +57,11 @@ Run the canonical acceptance gate before completion:
 just validate
 ```
 
-That command runs version, registry-response, publication policy,
-recovery, and historical smoke selection tests, exercises manifest
-writes against a disposable rootless registry, builds and smoke-tests
-both image variants, then runs the source and static-analysis checks
-inside the proposed `dev` image.
+That command is the acceptance gate that CI also runs. It exercises the
+automation's tests, builds and smoke-tests both image variants as one
+acceptance unit, and runs the source and static-analysis checks with
+the proposed `dev` image's toolchain. `bin/containers.nu` defines its
+steps.
 
 Tests live under `tests/` and use Nushell's bundled `std/assert`
 module. Run `just test` for the local suites and `just test-registry`
@@ -88,8 +88,7 @@ IMAGE=localhost/archlinux just build dev
 ```
 
 `just validate` always checks both variants as one acceptance unit.
-Unreleased local builds use the `local` version. Review the intended
-diff and run `git diff --check` for every change. Report skipped or
+Unreleased local builds use the `local` version. Report skipped or
 unavailable checks as unverified, preserving useful diagnostics and
 failure status.
 
@@ -123,8 +122,8 @@ newline.
 - GitHub Actions YAML uses actionlint through `just lint`. The pinned
   tool does not recognize GitHub's `concurrency.queue` property yet.
   The invocation excludes only that exact unknown-key diagnostic; a
-  `CHECK:` comment records its removal condition and the GitHub
-  reference.
+  `CHECK:` comment records its removal condition and the upstream
+  actionlint issue.
 - Nushell has no separate formatter or linter selected. Loading
   `bin/containers.nu` exercises the Nushell parser, and the public
   commands provide behavioral validation. No suitable Nushell-specific
@@ -159,33 +158,11 @@ To add another image family, place its Containerfile and version
 metadata under `src/`, extend `bin/containers.nu`, and update the
 publication workflow without duplicating the public Just interface.
 
-## Shared Skills
+## Change Workflow
 
-Codex is the supported agent client. Obtain shared workflows from
-[Methodic Games Agent Skills](https://git.methodic.games/methodic/skills).
-In a separate checkout of that collection, run:
-
-```sh
-just install codex
-```
-
-The installer copies the collection into `~/.agents/skills`, Codex's
-[user skill discovery directory](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills).
-It includes each package's supporting scripts and references. Refresh
-installed copies with `just update codex` from that same checkout.
-
-This project's workflows use `git-commit`, `markdown-format`, and
-`copyedit`; pinned external-dependency audits use
-`dependencies-update`. Setup audits use `project-audit` and its
-companion `project-init`; deferred-findings and actionable-comment
-reviews use `fyi-audit` and `todo-audit` when requested. Installing the
-collection also supplies optional workflows that this repository does
-not require.
-
-Before agent-assisted work, confirm the relevant skills appear in
-Codex's available skill list. Keep one discoverable copy of each shared
-skill; do not add duplicate copies under this repository's `.agents/`
-or `.codex/` directories.
+Keep changes focused and preserve unrelated work. Raise contradictions
+or material ambiguity before implementation that depends on them.
+Review the intended diff and run `git diff --check` for every change.
 
 ## Commits
 

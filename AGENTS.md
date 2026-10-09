@@ -33,6 +33,9 @@ rootless Podman and published to GHCR by GitHub Actions.
   publication; workflows must not reimplement them.
 - Pull requests and `main` pushes must never publish. Only a valid,
   explicitly pushed signed release tag may publish images.
+- `/dst/`, `/.tmp/`, and `/scratch/` hold disposable generated and
+  build output, non-output operational state, and exploratory material,
+  respectively; they are not maintained project source.
 
 ## Hard Constraints
 
@@ -41,3 +44,19 @@ rootless Podman and published to GHCR by GitHub Actions.
   `/doc/GOAL.md` to the user at the end of the task.
 - The 0BSD license covers repository-authored source only. Do not imply
   that software installed in an image uses that license.
+
+## Comments and Documentation
+
+Do not create unnecessary cross-reference maintenance burden: avoid
+restating changeable facts from source code, configuration, tests, or
+other authoritative material when routine changes would require
+synchronized edits elsewhere. Examples include exact test counts,
+exhaustive inventories, and incidental implementation details. Prefer
+explaining intent, behavior, or rationale and referring readers to the
+authoritative source.
+
+When specificity is necessary for clarity, use the least restrictive
+accurate wording. Identify examples as non-exhaustive and avoid fixed
+counts or claims of exclusivity unless readers need that precision.
+Preserve exact wording where it defines a requirement or contract. Keep
+unavoidable duplicated facts synchronized when changing their source.
