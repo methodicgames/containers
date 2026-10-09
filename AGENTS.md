@@ -1,49 +1,51 @@
+<!--
+SPDX-FileCopyrightText: 2026 Methodic Games LLC
+SPDX-License-Identifier: 0BSD
+-->
+
 # AGENTS
 
 This repository defines versioned OCI image families built with
-rootless Podman and published to GHCR by GitHub Actions.
+rootless Podman and published to GHCR by GitHub Actions. Use rootless
+Podman; do not substitute Docker unless the task explicitly changes the
+supported tooling.
 
-## Authorities
+Project context and use are documented in `/README.md`; contributor
+conventions and canonical validation are documented in
+`/CONTRIBUTING.md`. Consult `/doc/DESIGN.md` for architecture decisions
+and `/doc/NOTES.md` for non-obvious operational knowledge when
+relevant.
 
-- `/README.md` is the user-facing reference.
-- `/CONTRIBUTING.md` defines contributor and validation workflows.
-- `/doc/GOAL.md` records durable priorities. Treat it as high-level
-  priorities, not an implementation specification.
-- `/doc/DESIGN.md` records architecture and enduring boundaries.
-- `/doc/NOTES.md` records curated durable knowledge and non-obvious
+## File-Specific Instructions
+
+- `/AGENTS.md`: Do not modify without explicit user permission.
+- `/doc/DESIGN.md` and `/doc/GOAL.md`: Conspicuously report any changes
+  to the user at the end of the task. Treat `/doc/GOAL.md` as
+  high-level priorities, not an implementation specification.
+- `/doc/NOTES.md`: Curated durable knowledge and non-obvious
   operational discoveries, not an activity log.
-- `/doc/FYI.md` records deferred incidental findings. Do not
-  investigate them merely to expand an item.
-- `/doc/SKILLS.md`, when present, records project-specific skill
-  overrides. When using a skill, read its matching section.
-- `/doc/PROJECT.md` records dependency-update rules, setup decisions,
-  and baseline exceptions.
-- `/doc/RELEASING.md` defines release and recovery procedures.
-- `/justfile` is the authority for local and CI automation.
-
-## Consequential Constraints
-
-- Keep image-family source under `/src/<family>/` and pin upstream
-  images by immutable tag and digest.
-- Treat `/src/archlinux/VERSION` as the Arch Archive snapshot source of
-  truth. Its dotted date determines Arch release-tag dates.
-- Use rootless Podman. Do not substitute Docker unless the task
-  explicitly changes the supported tooling.
-- Use Just recipes for validation, builds, smoke tests, releases, and
-  publication; workflows must not reimplement them.
-- Pull requests and `main` pushes must never publish. Only a valid,
-  explicitly pushed signed release tag may publish images.
-- `/dst/`, `/.tmp/`, and `/scratch/` hold disposable generated and
-  build output, non-output operational state, and exploratory material,
-  respectively; they are not maintained project source.
-
-## Hard Constraints
-
-- Do not modify `/AGENTS.md` without explicit user permission.
-- Conspicuously report any changes to `/doc/DESIGN.md` and
-  `/doc/GOAL.md` to the user at the end of the task.
-- The 0BSD license covers repository-authored source only. Do not imply
-  that software installed in an image uses that license.
+- `/doc/FYI.md`: Deferred incidental findings. Do not investigate them
+  merely to expand an item.
+- `/doc/SKILLS.md`: Project-specific skill overrides. When using a
+  skill, read its matching section.
+- `/doc/PROJECT.md`: Dependency-update rules, repository setup
+  decisions, and deliberate project setup exceptions.
+- `/doc/RELEASING.md`: Release and recovery procedures.
+- `/dst/`, `/.tmp/`, and `/scratch/`: Disposable generated and build
+  output, non-output operational state, and exploratory material,
+  respectively; not maintained project source.
+- `/src/<family>/`: Image-family source. Pin upstream images by
+  immutable tag and digest.
+- `/src/archlinux/VERSION`: Arch Archive snapshot source of truth. Its
+  dotted date determines Arch release-tag dates.
+- `/justfile`: Authority for local and CI automation. Use its recipes
+  for validation, builds, smoke tests, releases, and publication.
+- `/.github/workflows/`: Invoke Just recipes rather than reimplementing
+  them. Pull requests and `main` pushes must never publish. Only a
+  valid, explicitly pushed signed release tag may publish images.
+- `/LICENSE` and `/REUSE.toml`: The 0BSD license covers
+  repository-authored source only. Do not imply that software installed
+  in an image uses that license.
 
 ## Comments and Documentation
 

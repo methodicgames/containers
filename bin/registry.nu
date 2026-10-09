@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 # Registry authentication and manifest transport. No publication policy.
 
 const manifest_media_types = [

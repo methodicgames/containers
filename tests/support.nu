@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 # Small test utilities shared by the standalone std/assert suites.
 
 use std/assert

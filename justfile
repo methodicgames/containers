@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 set shell := ["nu", "--no-config-file", "--commands"]
 
 today := `date now | date to-timezone UTC | format date "%Y%m%d"`

@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Methodic Games LLC
+SPDX-License-Identifier: 0BSD
+-->
+
 # Notes
 
 ## Selecting an Arch Snapshot

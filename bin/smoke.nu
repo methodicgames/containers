@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 # Host-side image checks. Call through the public Just recipes.
 
 use versions.nu parse-snapshot

@@ -1,4 +1,6 @@
 #!/usr/bin/env -S nu --no-config-file
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
 
 # Run inside the image. Host-side container orchestration lives in smoke.nu.
 

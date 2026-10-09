@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 # Resumable publication policy, independent of registry transport.
 
 use versions.nu *

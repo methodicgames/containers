@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 # Pure parsing and naming rules shared by local and registry operations.
 
 export def parse-snapshot [snapshot: string] {

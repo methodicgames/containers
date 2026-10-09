@@ -1,4 +1,6 @@
 #!/usr/bin/env -S nu --no-config-file
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
 
 use std/assert
 use ../bin/versions.nu *

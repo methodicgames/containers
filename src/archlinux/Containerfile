@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
 ARG ARCH_IMAGE=docker.io/archlinux/archlinux:base-20261003.0.606596@sha256:c17aa6e695fdd9f6b6410b07ec02c5c21c2317b4cb721cb23c655718cf5ee3bd
 
 FROM ${ARCH_IMAGE} AS base

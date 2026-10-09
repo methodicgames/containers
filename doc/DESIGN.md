@@ -1,6 +1,13 @@
+<!--
+SPDX-FileCopyrightText: 2026 Methodic Games LLC
+SPDX-License-Identifier: 0BSD
+-->
+
 # Design
 
-## Authority Map
+## Architecture
+
+### Authority Map
 
 - `src/<family>/` owns each image family's Containerfile and version
   metadata.
@@ -19,38 +26,7 @@
   contributor-facing reference.
 - `doc/RELEASING.md` owns release and recovery procedures.
 
-## Arch Linux Family
-
-The Arch family supports `linux/amd64`. Its `base` stage begins from an
-upstream image pinned by tag and digest, replaces the active package
-mirror with a dated Arch Linux Archive snapshot, updates packages, and
-clears the package cache.
-
-The `dev` stage extends `base` directly. It adds non-interactive build
-and validation tools required by this repository and its downstream
-jobs. It does not define a separate CI stage or install host-oriented
-interactive tools. Both variants intentionally run as container root;
-rootless Podman maps that identity into the invoking user's namespace.
-
-## Version and Tag Model
-
-`YYYYMMDD` identifies the shared Archive snapshot and determines the
-dotted date in release tags. A signed annotated Git tag
-`archlinux/<variant>-YYYY.MM.DD-N` identifies one variant release. Each
-variant has an independent per-snapshot sequence: `N` starts at `1` and
-increases without gaps. Removing the `archlinux/` namespace from the
-Git tag produces the exact immutable OCI tag.
-
-Publication creates three tag classes:
-
-- `VARIANT-YYYY.MM.DD-N` is the immutable release reference.
-- `VARIANT-YYYY.MM.DD` moves within one release date.
-- `VARIANT` is the moving convenience alias.
-
-The Git release tag and OCI revision label trace an image to source.
-Consumers pin OCI manifest digests when tag mutability is unacceptable.
-
-## Automation Boundary
+### Automation Boundary
 
 Just exposes memorable commands and delegates implementation to
 Nushell. Focused source checks remain available separately. The
@@ -75,12 +51,7 @@ verification, and receipts, keeping transport and credentials outside
 the policy. Publication and published-image checks share the same alias
 planning rules.
 
-Retained generated or build output belongs under `dst/`. Ignored caches
-and other repository-local operational state belong under `.tmp/`.
-Disposable exploration belongs under `scratch/`. All three directories
-can be removed without deleting maintained source.
-
-## Hosted Publication
+### Hosted Publication
 
 Pull requests and relevant pushes to `main` run the canonical gate on
 the Actions runner with read-only repository permission. A matching
@@ -112,7 +83,53 @@ the new policy. Production uses the updated workflow; exceptional
 manual recovery requires quiescent publication and the original release
 inputs.
 
-## Licensing Boundary
+## Source and Generated State
+
+`src/<family>/` holds every authoritative image input. For the Arch
+family, the Containerfile pins the upstream image and Archive URL, and
+`src/archlinux/VERSION` records the matching snapshot date.
+
+Retained generated or build output belongs under `dst/`. Ignored caches
+and other repository-local operational state belong under `.tmp/`.
+Disposable exploration belongs under `scratch/`. All three directories
+can be removed without deleting maintained source.
+
+## Interfaces and Invariants
+
+### Arch Linux Family
+
+The Arch family supports `linux/amd64`. Its `base` stage begins from an
+upstream image pinned by tag and digest, replaces the active package
+mirror with a dated Arch Linux Archive snapshot, updates packages, and
+clears the package cache.
+
+The `dev` stage extends `base` directly. It adds non-interactive build
+and validation tools required by this repository and its downstream
+jobs. It does not define a separate CI stage or install host-oriented
+interactive tools. Both variants intentionally run as container root;
+rootless Podman maps that identity into the invoking user's namespace.
+
+### Version and Tag Model
+
+`YYYYMMDD` identifies the shared Archive snapshot and determines the
+dotted date in release tags. A signed annotated Git tag
+`archlinux/<variant>-YYYY.MM.DD-N` identifies one variant release. Each
+variant has an independent per-snapshot sequence: `N` starts at `1` and
+increases without gaps. Removing the `archlinux/` namespace from the
+Git tag produces the exact immutable OCI tag.
+
+Publication creates three tag classes:
+
+- `VARIANT-YYYY.MM.DD-N` is the immutable release reference.
+- `VARIANT-YYYY.MM.DD` moves within one release date.
+- `VARIANT` is the moving convenience alias.
+
+The Git release tag and OCI revision label trace an image to source.
+Consumers pin OCI manifest digests when tag mutability is unacceptable.
+
+## Decisions
+
+### Licensing Boundary
 
 Repository-authored definitions, automation, and documentation use
 0BSD. Packages installed into images retain their own copyright and

@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Methodic Games LLC
+SPDX-License-Identifier: 0BSD
+-->
+
 # Releasing
 
 This repository publishes versioned OCI images without generating a
