@@ -50,6 +50,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A tag-triggered checkout can record the release tag as a lightweight
+      # tag; fetch the annotated tag itself so its signature can be checked.
+      - name: Fetch Release Tag
+        run: git fetch --force origin $"refs/tags/($env.RELEASE_TAG):refs/tags/($env.RELEASE_TAG)"
+
       - name: Validate Release
         id: release
         run: just validate-release $env.RELEASE_TAG
