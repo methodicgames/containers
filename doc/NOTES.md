@@ -31,6 +31,16 @@ Container root is required by package tooling and GitHub Actions job
 containers. With rootless Podman, it maps through the invoking user's
 user namespace and does not grant host root privileges.
 
+## Inherited Image Labels
+
+Derived images inherit every label from the upstream Arch image unless
+the Containerfile overrides it. Upstream sets OCI `authors`, `created`,
+`licenses`, and `url` labels that describe Arch's image build,
+including the license of its build scripts. The base stage replaces
+them so image metadata neither misattributes the image nor declares one
+license for its installed software. Smoke tests reject any other OCI
+label that upstream adds until it has been reviewed.
+
 ## Public Versus Interactive Tools
 
 The `dev` image contains tools needed for builds and non-interactive

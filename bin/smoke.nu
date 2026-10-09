@@ -2,6 +2,27 @@
 
 use versions.nu parse-snapshot
 
+# Images inherit upstream labels; new upstream OCI labels must be reviewed.
+const oci_labels = [
+    'org.opencontainers.image.authors'
+    'org.opencontainers.image.created'
+    'org.opencontainers.image.description'
+    'org.opencontainers.image.documentation'
+    'org.opencontainers.image.licenses'
+    'org.opencontainers.image.revision'
+    'org.opencontainers.image.source'
+    'org.opencontainers.image.title'
+    'org.opencontainers.image.url'
+    'org.opencontainers.image.version'
+]
+
+const replaced_labels = {
+    'org.opencontainers.image.authors': 'Methodic Games LLC'
+    'org.opencontainers.image.created': ''
+    'org.opencontainers.image.licenses': ''
+    'org.opencontainers.image.url': 'https://github.com/methodicgames/containers'
+}
+
 def run-image-check [image_ref: string, command: list<string>, failure: string] {
     let result = (^podman run --rm $image_ref ...$command | complete)
     if $result.exit_code != 0 {
@@ -61,6 +82,22 @@ def check-image-metadata [image_ref: string, variant: string, image_context: rec
     }
     if ($labels | get 'org.opencontainers.image.source') != 'https://github.com/methodicgames/containers' {
         error make {msg: $"($image_ref) has an unexpected source label"}
+    }
+
+    let unreviewed = (
+        $labels
+        | columns
+        | where {|label|
+                ($label starts-with 'org.opencontainers.image.') and ($label not-in $oci_labels)
+            }
+    )
+    if not ($unreviewed | is-empty) {
+        error make {msg: $"($image_ref) has unreviewed labels: ($unreviewed | str join ', ')"}
+    }
+    for label in ($replaced_labels | transpose name value) {
+        if ($labels | get -o $label.name) != $label.value {
+            error make {msg: $"($image_ref) does not replace upstream label ($label.name)"}
+        }
     }
 }
 

@@ -12,6 +12,11 @@ LABEL org.opencontainers.image.documentation="https://github.com/methodicgames/c
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${REVISION}"
 LABEL games.methodic.containers.variant="base"
+# Replace upstream image metadata; installed software keeps its own licenses.
+LABEL org.opencontainers.image.authors="Methodic Games LLC"
+LABEL org.opencontainers.image.url="https://github.com/methodicgames/containers"
+LABEL org.opencontainers.image.licenses=""
+LABEL org.opencontainers.image.created=""
 
 USER root
 
