@@ -66,9 +66,13 @@ def succeeds [result: record] {
     assert equal $result.exit_code 0 $"unexpected failure: ($result.stderr)"
 }
 
-def fails [result: record, message: string] {
-    assert ($result.exit_code != 0) $"expected failure: ($message)"
-    assert ($result.stderr | str contains $message) $"unexpected failure: ($result.stderr)"
+# The context names the command when one scenario checks several.
+def fails [result: record, message: string, --context: string = ''] {
+    let prefix = if $context == '' { '' } else { $"($context): " }
+    assert ($result.exit_code != 0) $"($prefix)expected failure: ($message)"
+    assert ($result.stderr | str contains $message) (
+        $"($prefix)expected failure: ($message); got: ($result.stderr)"
+    )
 }
 
 def signed-tag [tag: string, --key: string] {
@@ -223,7 +227,7 @@ def rejects-release-source [
 ] {
     let invocation = (release-source-invocation $command $tag)
     with-env ($invocation.env | merge {REVISION: $revision}) {
-        fails (run-automation $fixture ...$invocation.arguments) $message
+        fails (run-automation $fixture ...$invocation.arguments) $message --context $command
     }
 }
 

@@ -20,7 +20,7 @@ export def rejects [operation: closure, message: string] {
     }
 
     assert ($failure != null) $"expected failure: ($message)"
-    assert ($failure | str contains $message) $"unexpected failure: ($failure)"
+    assert ($failure | str contains $message) $"expected failure: ($message); got: ($failure)"
 }
 
 # Each named case is a zero-argument closure. Stop at the first failed assertion.
