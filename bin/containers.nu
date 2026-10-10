@@ -56,35 +56,49 @@ def markdown-files [] {
     | where {|file| not ($file | is-empty) and ($file | path exists) }
 }
 
-def validate-source [] {
-    let snapshot = (open --raw src/archlinux/VERSION | str trim)
-    let snapshot_path = (parse-snapshot $snapshot).path
-    let containerfile = 'src/archlinux/Containerfile'
-    let content = (open --raw $containerfile)
-    let upstream = (
+const containerfile = 'src/archlinux/Containerfile'
+const image_pin = 'ARG ARCH_IMAGE='
+
+def archive-url [snapshot: string] {
+    $"archive.archlinux.org/repos/((parse-snapshot $snapshot).path)/"
+}
+
+# Read the upstream image and Archive URL that the Containerfile pins. Source
+# validation and update-arch both require exactly one well-formed pin of each.
+def arch-pins [content: string] {
+    let images = ($content | lines | where {|line| $line starts-with $image_pin })
+    let archives = (
         $content
-        | lines
-        | where {|line| $line starts-with 'ARG ARCH_IMAGE=' }
+        | parse --regex '(?<url>archive[.]archlinux[.]org/repos/[0-9]{4}/[0-9]{2}/[0-9]{2}/)'
     )
-    if ($upstream | length) != 1 {
-        fail 'malformed pinned Arch image'
+    if ($images | length) != 1 or ($archives | length) != 1 {
+        fail 'expected one upstream image and one Archive URL'
     }
-    let image_pattern = 'ARG ARCH_IMAGE=docker[.]io/archlinux/archlinux:base-(?<snapshot>[0-9]{8})[.]0[.][0-9]+@sha256:[0-9a-f]{64}'
+
+    let image = ($images | first | str replace $image_pin '')
     let image_match = (
-        $upstream | first | parse --regex $"^($image_pattern)$"
+        $image
+        | parse --regex '^docker[.]io/archlinux/archlinux:base-(?<snapshot>[0-9]{8})[.]0[.][0-9]+@sha256:[0-9a-f]{64}$'
     )
     if ($image_match | is-empty) {
         fail 'malformed pinned Arch image'
     }
-    if $image_match.0.snapshot > $snapshot {
+
+    {image: $image, image_snapshot: $image_match.0.snapshot, archive: $archives.0.url}
+}
+
+def validate-source [] {
+    let snapshot = (open --raw src/archlinux/VERSION | str trim)
+    let content = (open --raw $containerfile)
+    let pins = (arch-pins $content)
+    if $pins.image_snapshot > $snapshot {
         fail $"upstream image is newer than Archive snapshot ($snapshot)"
+    }
+    if $pins.archive != (archive-url $snapshot) {
+        fail 'Archive snapshot does not match the Arch version'
     }
 
     let lines = ($content | lines)
-    let archive = $"archive.archlinux.org/repos/($snapshot_path)/"
-    if not ($content | str contains $archive) {
-        fail 'Archive snapshot does not match the Arch version'
-    }
     if not ($lines | any {|line| $line == 'FROM ${ARCH_IMAGE} AS base' }) {
         fail 'base stage does not use the pinned Arch image'
     }
@@ -141,8 +155,7 @@ def "main clean" [] {
 }
 
 def check-archive-snapshot [snapshot: string] {
-    let snapshot_path = (parse-snapshot $snapshot).path
-    let archive = $"archive.archlinux.org/repos/($snapshot_path)/"
+    let archive = (archive-url $snapshot)
     let archive_result = (
         ^curl --fail --silent --output /dev/null --head
             $"https://($archive)core/os/x86_64/core.db"
@@ -198,41 +211,20 @@ def "main update-arch" [snapshot: string] {
     let archive = (check-archive-snapshot $snapshot)
     let entry = (latest-arch-image $snapshot)
 
-    let containerfile = 'src/archlinux/Containerfile'
     let version_file = 'src/archlinux/VERSION'
     let upstream = $"docker.io/archlinux/archlinux:($entry.name)@($entry.digest)"
-    let current_version = (open --raw $version_file | str trim)
     let content = (open --raw $containerfile)
-
-    let image_is_current = (
-        $content | lines | any {|line| $line == $"ARG ARCH_IMAGE=($upstream)" }
-    )
-    let archive_is_current = ($content | str contains $archive)
-    let version_is_current = $current_version == $snapshot
-    if $image_is_current and $archive_is_current and $version_is_current {
+    let pins = (arch-pins $content)
+    let version_is_current = (open --raw $version_file | str trim) == $snapshot
+    if $pins.image == $upstream and $pins.archive == $archive and $version_is_current {
         print $"Arch inputs are already current for ($snapshot)"
         return
     }
 
-    let lines = ($content | lines)
-    let image_count = (
-        $lines | where {|line| $line starts-with 'ARG ARCH_IMAGE=' } | length
-    )
-    let archive_count = (
-        $lines
-        | where {|line|
-                $line =~ 'archive[.]archlinux[.]org/repos/[0-9]{4}/[0-9]{2}/[0-9]{2}/'
-            }
-        | length
-    )
-    if $image_count != 1 or $archive_count != 1 {
-        fail 'expected one upstream image and one Archive URL'
-    }
-
     let updated = (
         $content
-        | str replace --regex '(?m)^ARG ARCH_IMAGE=.*$' $"ARG ARCH_IMAGE=($upstream)"
-        | str replace --regex 'archive[.]archlinux[.]org/repos/[0-9]{4}/[0-9]{2}/[0-9]{2}/' $archive
+        | str replace $"($image_pin)($pins.image)" $"($image_pin)($upstream)"
+        | str replace $pins.archive $archive
     )
     $updated | save --force $containerfile
     $"($snapshot)\n" | save --force $version_file
@@ -273,7 +265,7 @@ def "main build" [requested: string = 'all'] {
     for target in (variants $requested) {
         (
             ^podman build
-                --file src/archlinux/Containerfile
+                --file $containerfile
                 --platform linux/amd64
                 --target $target
                 --build-arg $"VERSION=($image_context.version)"
