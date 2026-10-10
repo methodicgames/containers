@@ -36,9 +36,16 @@ def manifest-identity [] {
     rejects { parse-manifest ($index | reject mediaType | to json) } 'single-platform'
 }
 
+def skopeo-messages [] {
+    let fatal = 'time="2026-10-10T14:50:16-04:00" level=fatal msg="reading manifest base in \"example.test/x\": authentication required"'
+    assert equal (skopeo-message $"warning line\n($fatal)\n") 'reading manifest base in "example.test/x": authentication required'
+    assert equal (skopeo-message "  unexpected output\n") 'unexpected output'
+}
+
 def main [] {
     run-tests 'registry' {
         'image addresses': { image-addresses }
         'manifest identity': { manifest-identity }
+        'skopeo failure messages': { skopeo-messages }
     }
 }

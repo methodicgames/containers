@@ -44,22 +44,34 @@ export def without-host-registries [operation: closure] {
     }
 }
 
-# The timeout keeps a stalled registry from holding the publication lock.
-def --wrapped skopeo [...arguments: string] {
+# Unlike an external call, this returns the result instead of stopping on
+# failure. The timeout keeps a stalled registry from holding the publication lock.
+def --wrapped capture-skopeo [...arguments: string] {
     without-host-registries { ^skopeo --command-timeout 5m ...$arguments | complete }
 }
 
 def inspect-raw [client: record, reference: string, --config] {
     let target = if $config { ['--config'] } else { [] }
     (
-        skopeo inspect --raw ...$target ...(connection $client)
+        capture-skopeo inspect --raw ...$target ...(connection $client)
             $"docker://($client.image)($reference)"
     )
 }
 
+# skopeo reports a failure as a `time=... level=fatal msg="..."` log line. Keep
+# only its message; return any other output whole.
+export def skopeo-message [stderr: string] {
+    let fatal = ($stderr | parse --regex 'level=fatal msg="(?<msg>.*)"')
+    if ($fatal | is-empty) {
+        $stderr | str trim
+    } else {
+        $fatal | last | get msg | str replace --all '\"' '"'
+    }
+}
+
 def require-success [result: record, failure: string] {
     if $result.exit_code != 0 {
-        error make {msg: $"($failure): ($result.stderr | str trim)"}
+        error make {msg: $"($failure): (skopeo-message $result.stderr)"}
     }
 
     $result.stdout
@@ -115,7 +127,7 @@ export def lookup-artifact [client: record, tag: string] {
 export def promote-manifest [client: record, tag: string, artifact: record] {
     # Retag the exact release manifest; skopeo fails rather than convert it.
     let result = (
-        skopeo copy --quiet --preserve-digests
+        capture-skopeo copy --quiet --preserve-digests
             ...(connection $client 'src-') ...(connection $client 'dest-')
             $"docker://($client.image)@($artifact.digest)"
             $"docker://($client.image):($tag)"
