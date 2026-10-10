@@ -82,12 +82,13 @@ def publication-fixture [image: string, directory: path] {
                 | ignore
             )
             let digestfile = ($directory | path join 'digest')
-            (
-                ^podman push --quiet --tls-verify=false
-                    --digestfile $digestfile
-                    $"($image):($tag)"
-                | ignore
-            )
+            without-host-registries {
+                (
+                    ^podman push --quiet --tls-verify=false
+                        --digestfile $digestfile
+                        $"($image):($tag)"
+                )
+            }
             verify-manifest $client $tag (open --raw $digestfile | str trim)
 
             let count = (open $state_file | get creates)
@@ -101,7 +102,9 @@ def publication-fixture [image: string, directory: path] {
         }
         smoke: {|artifact|
             let image_ref = $"($image)@($artifact.digest)"
-            ^podman pull --quiet --tls-verify=false $image_ref | ignore
+            without-host-registries {
+                ^podman pull --quiet --tls-verify=false $image_ref out> /dev/null
+            }
             let details = (^podman image inspect $image_ref | from json | first)
             assert equal $details.Architecture 'amd64'
         }
@@ -152,7 +155,6 @@ def publication-recovery [fixture: record] {
 # Host registry configuration can redirect reads to a stale mirror or block the
 # registry; registry access must reach the image's own registry regardless.
 def host-registry-configuration [fixture: record, directory: path] {
-    publish-release $fixture.expected $fixture.backend | ignore
     let client = $fixture.client
     let blocking = ($directory | path join 'registries.conf')
     let host = ($client.image | split row '/' | first)
@@ -160,6 +162,8 @@ def host-registry-configuration [fixture: record, directory: path] {
 
     for variable in ['CONTAINERS_REGISTRIES_CONF' 'CONTAINERS_REGISTRIES_CONF_OVERRIDE'] {
         with-env {$variable: $blocking} {
+            # The first pass pushes the release; both passes pull it.
+            publish-release $fixture.expected $fixture.backend | ignore
             assert equal (lookup-artifact $client 'base-2026.09.02-1') null
             let artifact = (lookup-artifact $client 'base-2026.09.01-2')
             promote-manifest $client 'configuration-test' $artifact

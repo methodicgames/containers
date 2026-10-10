@@ -105,8 +105,9 @@ lower-level operation used by the release workflow. It acts on the
 variant that the release tag selects and requires `REVISION` containing
 the full tagged Git commit ID. Registry inspection and alias promotion
 use skopeo, which finds the credentials written by `podman login` the
-same way Podman does. These requests and anonymous verification pulls
-ignore host registry mirrors and other `registries.conf` settings.
+same way Podman does. All requests to the publication registry,
+including image pushes and pulls, ignore host registry mirrors and
+other `registries.conf` settings.
 
 When the versioned image is absent, publication runs `just validate`,
 pushes the image once, and records its manifest digest. On retry, an

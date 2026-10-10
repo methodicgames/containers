@@ -384,18 +384,22 @@ def "main publish" [release_tag: string] {
 
             mkdir .tmp/publication
             let digestfile = $".tmp/publication/($tag).digest"
-            (
-                ^podman push --tls-verify=(not $client.loopback)
-                    --digestfile $digestfile
-                    $"($image_context.image):($tag)"
-            )
+            without-host-registries {
+                (
+                    ^podman push --tls-verify=(not $client.loopback)
+                        --digestfile $digestfile
+                        $"($image_context.image):($tag)"
+                )
+            }
             let digest = (open --raw $digestfile | str trim)
             verify-manifest $client $tag $digest
             lookup-artifact $client $tag
         }
         smoke: {|artifact|
             let reference = $"($image_context.image)@($artifact.digest)"
-            ^podman pull --tls-verify=(not $client.loopback) $reference
+            without-host-registries {
+                ^podman pull --tls-verify=(not $client.loopback) $reference
+            }
             ^podman tag $reference $"($image_context.image):(image-tag $artifact.variant $artifact.version)"
             ^just smoke-release $image_context.release.tag $artifact.revision
         }

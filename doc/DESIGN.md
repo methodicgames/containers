@@ -72,11 +72,10 @@ hours. The first successful versioned manifest is authoritative;
 retries validate its metadata and resume from that digest. Only a
 registry report that the release manifest is unknown allows an initial
 upload; skopeo does not reliably distinguish that case by exit status,
-so lookup matches its message. Registry lookups, alias promotion, and
-anonymous verification ignore host `registries.conf` settings, so a
-mirror cannot answer for the registry or mask its failure.
-Authentication failures, transport errors, and unrecognized messages
-stop work.
+so lookup matches its message. Requests to the publication registry
+ignore host `registries.conf` settings, so a mirror cannot answer for
+the registry or mask its failure. Authentication failures, transport
+errors, and unrecognized messages stop work.
 
 Publication inspects both aliases before changing either. Date aliases
 advance by sequence within their date; floating aliases advance by date
