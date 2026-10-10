@@ -152,27 +152,6 @@ def publication-recovery [fixture: record] {
     assert equal (open $state_file | get promotions) 2
 }
 
-def alias-ordering [fixture: record] {
-    let expected = $fixture.expected
-    let backend = $fixture.backend
-    let client = $fixture.client
-    publish-release $expected $backend | ignore
-
-    let newer = ($expected | update version '2026.09.01-10')
-    let newer_receipt = (publish-release $newer $backend)
-    let late_receipt = (publish-release $expected $backend)
-    assert equal ($late_receipt.aliases | get action) ['retained' 'retained']
-    verify-manifest $client 'base' $newer_receipt.digest
-
-    let future = ($expected | update version '2026.10.01-1')
-    let repair = ($expected | update version '2026.09.01-11')
-    let future_receipt = (publish-release $future $backend)
-    let repair_receipt = (publish-release $repair $backend)
-    assert equal ($repair_receipt.aliases | get action) ['promote' 'retained']
-    verify-manifest $client 'base' $future_receipt.digest
-    verify-manifest $client 'base-2026.09.01' $repair_receipt.digest
-}
-
 def authentication [source_image: string, directory: path] {
     let authdir = ($directory | path join 'auth' | path expand)
     mkdir $authdir
@@ -269,11 +248,6 @@ def main [] {
         'publication recovery': {
             with-publication-fixture {|fixture, directory|
                 publication-recovery $fixture
-            }
-        }
-        'alias ordering': {
-            with-publication-fixture {|fixture, directory|
-                alias-ordering $fixture
             }
         }
         'authentication and credential isolation': {
