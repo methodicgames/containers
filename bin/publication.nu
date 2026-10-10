@@ -6,11 +6,11 @@
 use versions.nu *
 
 # Artifacts contain source, variant, architecture, os, revision, version, digest.
-# Expected releases contain image, variant, version, revision.
-export def check-artifact [artifact: record, expected: record, --exact] {
+# Check that an artifact is a well-formed image of this project and variant.
+export def check-artifact [artifact: record, variant: string] {
     let identity_matches = (
         $artifact.source == 'https://github.com/methodicgames/containers'
-        and $artifact.variant == $expected.variant
+        and $artifact.variant == $variant
         and $artifact.architecture == 'amd64'
         and $artifact.os == 'linux'
     )
@@ -26,12 +26,6 @@ export def check-artifact [artifact: record, expected: record, --exact] {
     }
 
     parse-published-version $artifact.version | ignore
-    if $exact and (
-        $artifact.version != $expected.version
-        or $artifact.revision != $expected.revision
-    ) {
-        error make {msg: 'release tag already identifies a different version or revision'}
-    }
 }
 
 export def alias-action [current: any, candidate: record, --dated] {
@@ -39,7 +33,7 @@ export def alias-action [current: any, candidate: record, --dated] {
         return 'promote'
     }
 
-    check-artifact $current $candidate
+    check-artifact $current $candidate.variant
     let current_version = (parse-published-version $current.version)
     let candidate_version = (parse-published-version $candidate.version)
 
@@ -99,6 +93,7 @@ export def plan-aliases [candidate: record, lookup: closure] {
 # - verify(tag, digest) -> verify anonymous access and digest identity.
 # - receipt(record) -> persist progress; it is diagnostic, not recovery input.
 # Callback failures propagate, leaving registry state available for a retry.
+# The expected release contains image, variant, version, and revision.
 export def publish-release [expected: record, backend: record] {
     let immutable_tag = (image-tag $expected.variant $expected.version)
     let existing = (do $backend.lookup $immutable_tag)
@@ -107,7 +102,13 @@ export def publish-release [expected: record, backend: record] {
     } else {
         $existing
     }
-    check-artifact $artifact $expected --exact
+    check-artifact $artifact $expected.variant
+    if (
+        $artifact.version != $expected.version
+        or $artifact.revision != $expected.revision
+    ) {
+        error make {msg: 'release tag already identifies a different version or revision'}
+    }
 
     mut receipt = {
         image: $expected.image

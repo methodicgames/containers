@@ -345,7 +345,7 @@ def "main smoke-published" [release_tag: string] {
         fail $"release ($release.image_tag) is absent"
     }
 
-    check-artifact $artifact $release
+    check-artifact $artifact $release.variant
     if $artifact.version != $release.version {
         fail 'release version mismatch'
     }
