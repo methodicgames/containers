@@ -8,8 +8,8 @@ export def parse-snapshot [snapshot: string] {
         error make {msg: $"invalid Arch snapshot ($snapshot); expected YYYYMMDD"}
     }
 
-    let date = ($snapshot | into datetime --format '%Y%m%d')
-    if ($date | format date '%Y%m%d') != $snapshot {
+    let date = try { $snapshot | into datetime --format '%Y%m%d' } catch { null }
+    if $date == null or ($date | format date '%Y%m%d') != $snapshot {
         error make {msg: $"invalid Arch snapshot date ($snapshot)"}
     }
 

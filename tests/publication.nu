@@ -165,14 +165,28 @@ def alias-ordering [] {
 
 def artifact-conflicts [] {
     let candidate = (artifact)
+    let identity = 'conflicting source, variant, or platform'
+    let release = 'already identifies a different version or revision'
 
-    for field in ['revision' 'version' 'source' 'variant' 'architecture' 'os'] {
-        let bad = ($candidate | update $field 'conflict')
-        let conflict = (publication-fixture $candidate {'dev-2026.09.01-2': $bad})
-        rejects { publish-release $candidate $conflict.backend } ''
+    # Well-formed differences must reach the conflict checks, not format checks.
+    let conflicts = [
+        {field: 'source', value: 'https://example.invalid/other', message: $identity}
+        {field: 'variant', value: 'base', message: $identity}
+        {field: 'architecture', value: 'arm64', message: $identity}
+        {field: 'os', value: 'windows', message: $identity}
+        {field: 'revision', value: ('b' | fill --width 40 --character b), message: $release}
+        {field: 'version', value: '2026.09.01-3', message: $release}
+        {field: 'revision', value: 'conflict', message: 'invalid revision'}
+        {field: 'version', value: 'conflict', message: 'invalid published version'}
+    ]
 
-        assert equal (open $conflict.file | get creates) 0
-        assert equal (open $conflict.file | get promotions) []
+    for conflict in $conflicts {
+        let existing = ($candidate | update $conflict.field $conflict.value)
+        let fixture = (publication-fixture $candidate {'dev-2026.09.01-2': $existing})
+        rejects { publish-release $candidate $fixture.backend } $conflict.message
+
+        assert equal (open $fixture.file | get creates) 0
+        assert equal (open $fixture.file | get promotions) []
     }
 }
 

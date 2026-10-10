@@ -13,7 +13,7 @@ def snapshot-dates [] {
         path: '2026/09/01'
     }
     rejects { parse-snapshot '2026-09-01' } 'expected YYYYMMDD'
-    rejects { parse-snapshot '20260230' } ''
+    rejects { parse-snapshot '20260230' } 'invalid Arch snapshot date'
 }
 
 def release-parsing [] {
@@ -30,7 +30,7 @@ def release-parsing [] {
     rejects { check-release-snapshot $release '20260902' } 'must match Arch snapshot'
     rejects { parse-release-tag 'archlinux/other-2026.09.01-1' } 'invalid release tag'
     rejects { parse-published-version '2026.09.01-02' } 'invalid published version'
-    rejects { parse-published-version '2026.02.30-1' } ''
+    rejects { parse-published-version '2026.02.30-1' } 'invalid Arch snapshot date'
 }
 
 def revision-identities [] {
