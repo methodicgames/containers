@@ -35,7 +35,6 @@ def publication-fixture [candidate: record, releases: record = {}, failure: stri
         creates: 0
         promotions: []
         smokes: []
-        receipts: []
         failure: $failure
     }
     | to json | save $file
@@ -74,11 +73,6 @@ def publication-fixture [candidate: record, releases: record = {}, failure: stri
                 fault $file $"verify:($tag)"
                 assert equal (open $file | get tags | get $tag | get digest) $digest
             }
-            receipt: {|receipt|
-                mut state = (open $file)
-                $state.receipts = ($state.receipts | append $receipt)
-                $state | to json | save --force $file
-            }
         }
     }
 }
@@ -86,18 +80,18 @@ def publication-fixture [candidate: record, releases: record = {}, failure: stri
 def initial-and-retry [] {
     let candidate = (artifact)
     let initial = (publication-fixture $candidate)
-    let first_receipt = (publish-release $candidate $initial.backend)
+    let first = (publish-release $candidate $initial.backend)
 
-    assert equal $first_receipt.status 'complete'
+    assert equal $first.digest $candidate.digest
     assert equal (open $initial.file | get creates) 1
     assert equal (open $initial.file | get promotions) ['dev-2026.09.01' 'dev']
 
     # Rebuilding would produce different bytes. A retry must retain the first digest.
     let rebuilt = (artifact '2026.09.01-2' 'rebuilt')
     let retry = (publication-fixture $rebuilt (open $initial.file | get tags))
-    let retry_receipt = (publish-release $rebuilt $retry.backend)
+    let retried = (publish-release $rebuilt $retry.backend)
 
-    assert equal $retry_receipt.digest $candidate.digest
+    assert equal $retried.digest $candidate.digest
     assert equal (open $retry.file | get creates) 0
     assert equal (open $retry.file | get promotions) []
     assert equal (open $retry.file | get smokes) [$candidate.digest]
@@ -124,9 +118,8 @@ def interrupted-publication [] {
         let recovery = (publication-fixture $candidate {} $point)
         rejects { publish-release $candidate $recovery.backend } 'injected failure'
 
-        let receipt = (publish-release $candidate $recovery.backend)
+        publish-release $candidate $recovery.backend | ignore
         let state = (open $recovery.file)
-        assert equal $receipt.status 'complete'
         assert equal $state.creates 1
         assert equal ($state.tags | columns | length) 3
         for entry in ($state.tags | values) {
@@ -147,9 +140,9 @@ def alias-ordering [] {
         'dev-2026.10.01-1': $future
     }
     let late = (publication-fixture $candidate $seeded)
-    let late_receipt = (publish-release $candidate $late.backend)
+    let late_result = (publish-release $candidate $late.backend)
 
-    assert equal ($late_receipt.aliases | get action) ['retained' 'retained']
+    assert equal ($late_result.aliases | get action) ['retained' 'retained']
     assert equal (open $late.file | get promotions) []
 
     let old = (artifact '2026.09.01-1' 'older')

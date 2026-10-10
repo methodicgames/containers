@@ -51,9 +51,9 @@ Version parsing takes explicit input; matching a release to the current
 snapshot is a separate check. Command orchestration captures image and
 registry settings before passing them to helpers. Publication policy
 uses callbacks for registry lookup, creation, smoke testing, promotion,
-verification, and receipts, keeping transport and credentials outside
-the policy. Publication and published-image checks share the same alias
-planning rules.
+and verification, keeping transport and credentials outside the policy.
+Publication and published-image checks share the same alias planning
+rules.
 
 ### Hosted Publication
 
@@ -80,10 +80,9 @@ manifest bytes within the same repository. Writes are individually
 verified and recoverable; the three tags are not an atomic transaction.
 
 Anonymous manifest and pull checks remain inside the publication lock.
-A receipt beneath `dst/publication/` records the release digest, alias
-decisions, verification progress, and completion. Registry state is
-sufficient for a fresh runner to resume. Development releases also test
-the published digest as a GitHub Actions job container.
+Registry state is sufficient for a fresh runner to resume. Development
+releases also test the published digest as a GitHub Actions job
+container.
 
 These guarantees apply to cooperating publishers. Manual registry
 writes and historical workflow code do not acquire the new lock or obey

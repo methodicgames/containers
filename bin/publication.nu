@@ -91,7 +91,6 @@ export def plan-aliases [candidate: record, lookup: closure] {
 # - smoke(artifact) -> validate runtime behavior without replacing the release.
 # - promote(tag, artifact) -> copy the artifact's exact manifest to an alias.
 # - verify(tag, digest) -> verify anonymous access and digest identity.
-# - receipt(record) -> persist progress; it is diagnostic, not recovery input.
 # Callback failures propagate, leaving registry state available for a retry.
 # The expected release contains image, variant, version, and revision.
 export def publish-release [expected: record, backend: record] {
@@ -110,20 +109,9 @@ export def publish-release [expected: record, backend: record] {
         error make {msg: 'release tag already identifies a different version or revision'}
     }
 
-    mut receipt = {
-        image: $expected.image
-        release: $immutable_tag
-        revision: $expected.revision
-        digest: $artifact.digest
-        status: 'pending'
-        aliases: []
-    }
-    do $backend.receipt $receipt
     do $backend.smoke $artifact
 
     let decisions = (plan-aliases $artifact $backend.lookup)
-    $receipt.aliases = $decisions
-    do $backend.receipt $receipt
     do $backend.verify $immutable_tag $artifact.digest
 
     for decision in $decisions {
@@ -131,18 +119,13 @@ export def publish-release [expected: record, backend: record] {
             do $backend.promote $decision.tag $artifact
         }
         do $backend.verify $decision.tag $decision.digest
-
-        $receipt.aliases = ($receipt.aliases | each {|alias|
-            if $alias.tag == $decision.tag {
-                $alias | insert verified true
-            } else {
-                $alias
-            }
-        })
-        do $backend.receipt $receipt
     }
 
-    $receipt.status = 'complete'
-    do $backend.receipt $receipt
-    $receipt
+    {
+        image: $expected.image
+        release: $immutable_tag
+        revision: $expected.revision
+        digest: $artifact.digest
+        aliases: $decisions
+    }
 }

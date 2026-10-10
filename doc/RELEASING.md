@@ -148,19 +148,14 @@ accepts an alias at a newer release only when that alias matches its
 own immutable release digest. Missing, older, or conflicting aliases
 fail the check.
 
-A diagnostic receipt is written to
-`dst/publication/<variant>-<YYYY.MM.DD-N>.json`. Recovery does not
-depend on retaining it.
-
 ## Recovery
 
 A partial publication failure can be retried with the same inputs. A
 retry reuses the first published release digest after validating its
 metadata and smoke-testing the image against its recorded source
-revision. It advances only aliases that are absent or older, verifies
-all selected digests anonymously, and records progress under
-`dst/publication/`. An existing equal-version digest conflict is an
-error, not permission to overwrite an image.
+revision. It advances only aliases that are absent or older and
+verifies all selected digests anonymously. An existing equal-version
+digest conflict is an error, not permission to overwrite an image.
 
 The recorded Git commit must be available locally. Publication exports
 that revision beneath `.tmp/release-smoke/` and runs only its

@@ -369,7 +369,6 @@ def "main publish" [release_tag: string] {
     }
 
     let client = (registry-context $image_context.image)
-    let receipt_path = $"dst/publication/($image_context.release.image_tag).json"
     let backend = {
         lookup: {|tag| lookup-artifact $client $tag }
         create: {|tag|
@@ -399,17 +398,13 @@ def "main publish" [release_tag: string] {
         }
         promote: {|tag, artifact| promote-manifest $client $tag $artifact }
         verify: {|tag, digest| anonymous-verify $image_context.image $tag $digest }
-        receipt: {|receipt|
-            mkdir ($receipt_path | path dirname)
-            $receipt | to json | save --force $receipt_path
-        }
     }
 
-    let receipt = (publish-release $expected $backend)
+    let publication = (publish-release $expected $backend)
     if ($env.GITHUB_OUTPUT? | default '') != '' {
-        $"digest=($receipt.digest)\n" | save --append $env.GITHUB_OUTPUT
+        $"digest=($publication.digest)\n" | save --append $env.GITHUB_OUTPUT
     }
-    print ($receipt | to json)
+    print ($publication | to json)
 }
 
 def main [] {

@@ -116,9 +116,6 @@ def publication-fixture [image: string, directory: path] {
             }
         }
         verify: {|tag, digest| verify-manifest $client $tag $digest }
-        receipt: {|receipt|
-            $receipt | to json | save --force ($directory | path join 'receipt.json')
-        }
     }
 
     {expected: $expected, backend: $backend, client: $client, state_file: $state_file}
@@ -141,8 +138,8 @@ def publication-recovery [fixture: record] {
         rejects { publish-release $expected $backend } 'injected interruption'
     }
 
-    let receipt = (publish-release $expected $backend)
-    assert equal $receipt.digest $first_digest
+    let result = (publish-release $expected $backend)
+    assert equal $result.digest $first_digest
     assert equal (open $state_file | get creates) 1
     assert equal (open $state_file | get promotions) 2
 
