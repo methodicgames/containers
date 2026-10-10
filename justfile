@@ -58,10 +58,6 @@ validate-release $release-tag:
 build $variant="all":
     nu --no-config-file bin/containers.nu build $env.variant
 
-# Add release-date and floating aliases to a locally built release image.
-tag $release-tag:
-    nu --no-config-file bin/containers.nu tag $env.release-tag
-
 # Run root, mirror, metadata, and tool smoke tests.
 smoke $variant="all":
     nu --no-config-file bin/containers.nu smoke $env.variant

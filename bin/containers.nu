@@ -273,16 +273,6 @@ def "main build" [requested: string = 'all'] {
     }
 }
 
-def "main tag" [release_tag: string] {
-    let image_context = (image-context '' --release-tag $release_tag)
-    let release = $image_context.release
-    let source = $"($image_context.image):($release.image_tag)"
-    ^podman image exists $source
-    for alias in (release-aliases $release.variant $release.version) {
-        ^podman tag $source $"($image_context.image):($alias.tag)"
-    }
-}
-
 def "main smoke" [requested: string = 'all'] {
     let image_context = (image-context 'local')
     let source = (pwd)
