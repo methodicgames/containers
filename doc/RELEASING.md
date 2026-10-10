@@ -171,10 +171,13 @@ commit ID; this command honors `IMAGE`.
 
 Keep production publication in the serialized release workflow. Manual
 `just publish` invocations require the original `RELEASE_TAG`, tagged
-`REVISION`, a clean checkout of that revision, and registry
-authentication; they must not overlap a production publisher. Test
-alternative registries through `IMAGE`. Plain HTTP is supported only
-for an explicit loopback host and port used by disposable tests.
+`REVISION`, a clean checkout of that revision, a current `origin/main`,
+and registry authentication; they must not overlap a production
+publisher. Publication rejects a tag that is absent, lightweight,
+targets another commit, or lacks a signature from a key in
+`.git-signers` on `origin/main`. Test alternative registries through
+`IMAGE`. Plain HTTP is supported only for an explicit loopback host and
+port used by disposable tests.
 
 Historical workflow reruns execute historical code. Do not rerun
 releases created before the current publication protections were

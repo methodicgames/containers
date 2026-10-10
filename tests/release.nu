@@ -41,7 +41,9 @@ def release-fixture [] {
     mkdir src/archlinux
     "20000101\n" | save src/archlinux/VERSION
     $signer | save .git-signers
-    ^git add -- src/archlinux/VERSION .git-signers
+    # Signature checks keep operational state beneath the ignored .tmp/.
+    "/.tmp/\n" | save .gitignore
+    ^git add -- src/archlinux/VERSION .git-signers .gitignore
     ^git commit --quiet --message 'Release fixture'
     ^git push --quiet origin main
 
@@ -208,7 +210,8 @@ def release-build-source [] {
     load-env $fixture.env
     cd $fixture.source
     let head = (^git rev-parse HEAD | str trim)
-    let release = {RELEASE_TAG: 'archlinux/dev-2000.01.01-1', REVISION: $head}
+    let tag = 'archlinux/dev-2000.01.01-1'
+    let release = {RELEASE_TAG: $tag, REVISION: $head}
 
     for command in [[build dev] [publish dev]] {
         'draft' | save untracked.txt
@@ -222,6 +225,32 @@ def release-build-source [] {
             fails (run-automation $fixture ...$command) 'require REVISION to be the checked-out commit'
         }
         ^git reset --quiet --hard $head
+
+        with-env $release {
+            fails (run-automation $fixture ...$command) 'is not present'
+        }
+
+        ^git tag $tag
+        with-env $release {
+            fails (run-automation $fixture ...$command) 'must be annotated'
+        }
+        ^git tag --delete $tag | ignore
+
+        # The tag must identify the commit whose source the image records.
+        signed-tag $tag
+        local-commit
+        let moved = {RELEASE_TAG: $tag, REVISION: (^git rev-parse HEAD | str trim)}
+        with-env $moved {
+            fails (run-automation $fixture ...$command) 'does not target REVISION'
+        }
+        ^git reset --quiet --hard $head
+        ^git tag --delete $tag | ignore
+
+        signed-tag $tag --key $fixture.untrusted_key
+        with-env $release {
+            fails (run-automation $fixture ...$command) 'is not signed by a key in refs/remotes/origin/main:.git-signers'
+        }
+        ^git tag --delete $tag | ignore
     }
 }
 

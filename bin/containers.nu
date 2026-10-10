@@ -87,6 +87,19 @@ def release-signature-error [tag_ref: string, trusted_ref: string] {
     null
 }
 
+def annotated-release-tag [tag: string] {
+    let tag_ref = $"refs/tags/($tag)"
+    let exists = (^git show-ref --verify --quiet $tag_ref | complete)
+    if $exists.exit_code != 0 {
+        fail $"release tag ($tag) is not present"
+    }
+    let object_type = (^git cat-file -t $tag_ref | str trim)
+    if $object_type != 'tag' {
+        fail $"release tag ($tag) must be annotated"
+    }
+    $tag_ref
+}
+
 # Capture repository and environment inputs once at the command boundary.
 def image-context [revision_default: string] {
     let snapshot = (open --raw src/archlinux/VERSION | str trim)
@@ -114,8 +127,9 @@ def validate-revision [revision: string] {
     }
 }
 
-# Release images record REVISION, so build them only from that clean commit.
-def check-release-source [revision: string] {
+# Release images record REVISION and their release version, so build them only
+# from that clean commit and only when a trusted release tag identifies it.
+def check-release-source [release: record, revision: string] {
     let status = (^git status --porcelain | str trim)
     if not ($status | is-empty) {
         fail 'release builds require a clean worktree'
@@ -123,6 +137,17 @@ def check-release-source [revision: string] {
     let head = (^git rev-parse HEAD | str trim)
     if $revision != $head {
         fail 'release builds require REVISION to be the checked-out commit'
+    }
+
+    let tag_ref = (annotated-release-tag $release.tag)
+    if (^git rev-list -n 1 $tag_ref | str trim) != $revision {
+        fail $"release tag ($release.tag) does not target REVISION"
+    }
+    let signature_error = (
+        release-signature-error $tag_ref refs/remotes/origin/main
+    )
+    if $signature_error != null {
+        fail $signature_error
     }
 }
 
@@ -321,15 +346,7 @@ def "main validate-release" [release_tag: string] {
     let release = (parse-release-tag $release_tag)
     check-release-snapshot $release (open --raw src/archlinux/VERSION | str trim)
 
-    let tag_ref = $"refs/tags/($release.tag)"
-    let exists = (^git show-ref --verify --quiet $tag_ref | complete)
-    if $exists.exit_code != 0 {
-        fail $"release tag ($release.tag) is not present"
-    }
-    let object_type = (^git cat-file -t $tag_ref | str trim)
-    if $object_type != 'tag' {
-        fail $"release tag ($release.tag) must be annotated"
-    }
+    let tag_ref = (annotated-release-tag $release.tag)
 
     let tags = (local-release-tags $release.variant $release.date)
     validate-release-sequence $release.variant $release.date $tags | ignore
@@ -433,7 +450,7 @@ def "main release" [release_tag: string] {
 def "main build" [requested: string = 'all'] {
     let image_context = (image-context 'local')
     if $image_context.release != null {
-        check-release-source $image_context.revision
+        check-release-source $image_context.release $image_context.revision
     }
     for target in (variants $requested) {
         (
@@ -553,7 +570,7 @@ def "main publish" [requested: string = 'all'] {
         fail 'publication requires REVISION as a full Git object ID'
     }
     publication-variants $requested $image_context.release.variant | ignore
-    check-release-source $image_context.revision
+    check-release-source $image_context.release $image_context.revision
 
     let expected = {
         image: $image_context.image

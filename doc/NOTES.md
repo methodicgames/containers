@@ -19,18 +19,17 @@ requires both.
 
 ## Version Identity
 
-`src/archlinux/VERSION` fixes the shared Archive snapshot date. A
-signed Git tag `archlinux/<variant>-YYYY.MM.DD-N` assigns a version to
-one variant's release. The dotted date comes from the snapshot, and `N`
-is that variant's gap-free sequence for the date. Published OCI tags
-omit the `archlinux/` prefix.
+The release tag model is described in
+[Design](DESIGN.md#version-and-tag-model).
 
 Published images use `YYYY.MM.DD-N` as their version and record the
 tagged Git commit as their revision. Unreleased local builds use
 `local` as their version and, unless `REVISION` is set, their revision.
 Publication requires `RELEASE_TAG`. Builds with `RELEASE_TAG` set and
-publication require a clean worktree whose `HEAD` is `REVISION`, so a
-release image cannot record a revision other than its source.
+publication require a clean worktree whose `HEAD` is `REVISION`, and an
+annotated `RELEASE_TAG` that targets `REVISION` and is signed by a key
+in `.git-signers` on `origin/main`. A release image therefore cannot
+record a version or revision that no trusted release tag identifies.
 
 ## Root Identity
 
