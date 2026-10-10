@@ -4,37 +4,71 @@
 
 # Run inside the image. Host-side container orchestration lives in smoke.nu.
 
-def require-command [command: string] {
-    if (which $command | is-empty) {
-        error make {msg: $"missing command ($command)"}
-    }
-}
+# Commands the development image must provide. Each package has one
+# representative with `run` arguments, which the job check executes; other
+# commands from the same package need only exist.
+const development_commands = [
+    {command: '7z', run: []}
+    {command: 'actionlint', run: ['-version']}
+    {command: 'b3sum', run: ['--version']}
+    {command: 'biome', run: ['--version']}
+    {command: 'bsdcpio'}
+    {command: 'bsdtar', run: ['--version']}
+    {command: 'c3c', run: ['--version']}
+    {command: 'check-jsonschema', run: ['--version']}
+    {command: 'clang', run: ['--version']}
+    {command: 'clang++'}
+    {command: 'curl', run: ['--version']}
+    {command: 'dotnet', run: ['--version']}
+    {command: 'dotCover', run: ['help']}
+    {command: 'dottrace', run: ['--help']}
+    {command: 'emcc', run: ['--version']}
+    {command: 'em++'}
+    {command: 'emar'}
+    {command: 'emcmake'}
+    {command: 'emconfigure'}
+    {command: 'emmake'}
+    {command: 'emranlib'}
+    {command: 'gcc', run: ['--version']}
+    {command: 'gh', run: ['--version']}
+    {command: 'git', run: ['--version']}
+    {command: 'git-lfs', run: ['version']}
+    {command: 'jb', run: ['inspectcode' '--version']}
+    {command: 'jq', run: ['--version']}
+    {command: 'just', run: ['--version']}
+    {command: 'make', run: ['--version']}
+    {command: 'node', run: ['--version']}
+    {command: 'nu', run: ['--version']}
+    {command: 'nvchecker', run: ['--version']}
+    {command: 'refasmer', run: ['--help']}
+    {command: 'reuse', run: ['--version']}
+    {command: 'rumdl', run: ['--version']}
+    {command: 'ssh', run: ['-V']}
+    {command: 'tar', run: ['--version']}
+    {command: 'tea', run: ['--version']}
+    {command: 'tmux', run: ['-V']}
+    {command: 'unzip', run: ['-v']}
+    {command: 'zip', run: ['-v']}
+    {command: 'zstd', run: ['--version']}
+]
 
-def reject-package [package: string] {
-    let installed = (^pacman -Q $package | complete)
-    if $installed.exit_code == 0 {
-        error make {msg: $"unexpected package ($package)"}
-    }
-}
+const excluded_packages = [bash-completion fd less man-db npm ripgrep wget]
 
 def main [] {
     print 'Use a subcommand: dev or job.'
 }
 
 def "main dev" [] {
-    let required_commands = [
-        7z actionlint b3sum biome bsdcpio bsdtar c3c check-jsonschema clang clang++
-        curl dotnet dotCover dottrace emcc em++ emar emcmake emconfigure emmake
-        emranlib gcc gh git git-lfs jb jq just make node nu nvchecker refasmer
-        reuse rumdl ssh tar tea tmux unzip zip zstd
-    ]
-    for command in $required_commands {
-        require-command $command
+    for entry in $development_commands {
+        if (which $entry.command | is-empty) {
+            error make {msg: $"missing command ($entry.command)"}
+        }
     }
 
-    let excluded_packages = [bash-completion fd less man-db npm ripgrep wget]
     for package in $excluded_packages {
-        reject-package $package
+        if (^pacman -Q $package | complete).exit_code == 0 {
+            error make {msg: $"unexpected package ($package)"}
+        }
     }
 }
 
@@ -44,36 +78,22 @@ def "main job" [] {
         error make {msg: 'job container does not run as root'}
     }
 
-    let seven_zip = (^7z | complete)
-    if $seven_zip.exit_code != 0 {
-        error make {msg: 'cannot query 7-Zip version'}
-    }
-    $seven_zip.stdout
-    | lines
-    | where {|line| not ($line | str trim | is-empty) }
-    | first
-    | print
+    for entry in ($development_commands | where {|entry| $entry.run? != null }) {
+        let result = (^$entry.command ...$entry.run | complete)
+        if $result.exit_code != 0 {
+            error make {msg: $"cannot run ($entry.command): ($result.stderr | str trim)"}
+        }
 
-    ^actionlint -version
-    ^b3sum --version
-    ^biome --version
-    ^bsdtar --version
-    ^c3c --version
-    ^check-jsonschema --version
-    ^clang --version
-    ^dotnet --version
-    ^dotCover help
-    ^dottrace --help
-    ^emcc --version
-    ^gh --version
-    ^node --version
-    ^git --version
-    ^git lfs version
-    ^just --version
-    ^jb inspectcode --version
-    ^nu --version
-    ^nvchecker --version
-    ^refasmer --help
-    ^tea --version
-    ^tmux -V
+        # One identifying line per command keeps job logs readable.
+        let summary = (
+            [$result.stdout $result.stderr]
+            | each { lines }
+            | flatten
+            | str trim
+            | where {|line| $line != '' }
+            | get -o 0
+            | default ''
+        )
+        print $"($entry.command): ($summary)"
+    }
 }
