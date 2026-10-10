@@ -4,6 +4,7 @@
 
 use publication.nu *
 use registry.nu *
+use releases.nu *
 use versions.nu *
 use smoke.nu smoke-image
 
@@ -20,74 +21,6 @@ def variants [requested: string] {
         return [$requested]
     }
     fail $"unknown variant ($requested); expected base, dev, or all" 2
-}
-
-def local-release-tags [variant: string, date: string] {
-    ^git tag --list $"archlinux/($variant)-($date)-*"
-    | lines
-    | where {|tag| not ($tag | is-empty) }
-}
-
-def remote-release-tags [variant: string, date: string] {
-    let result = (
-        ^git ls-remote --tags --refs origin $"refs/tags/archlinux/($variant)-($date)-*"
-        | complete
-    )
-    if $result.exit_code != 0 {
-        print --stderr ($result.stderr | str trim)
-        exit $result.exit_code
-    }
-    $result.stdout
-    | lines
-    | where {|line| not ($line | is-empty) }
-    | each {|line|
-            $line
-            | split row (char tab)
-            | last
-            | str replace 'refs/tags/' ''
-        }
-}
-
-# Trust comes from .git-signers at a reviewed ref, not from the tag's own tree,
-# so removing a key on main revokes it for later publication runs.
-def release-signature-error [tag_ref: string, trusted_ref: string] {
-    let tag = ($tag_ref | str replace 'refs/tags/' '')
-    let signers = (^git show $"($trusted_ref):.git-signers" | complete)
-    if $signers.exit_code != 0 {
-        return $"($trusted_ref) does not define .git-signers"
-    }
-    let content = (^git cat-file tag $tag_ref)
-    if not ($content | str contains '-----BEGIN SSH SIGNATURE-----') {
-        return $"release tag ($tag) must have an SSH signature"
-    }
-
-    let directory = ('.tmp/release-signers' | path join (random uuid) | path expand)
-    let allowed_signers = ($directory | path join 'allowed-signers')
-    mkdir $directory
-    $signers.stdout | save $allowed_signers
-    let result = (
-        ^git -c $"gpg.ssh.allowedSignersFile=($allowed_signers)" verify-tag $tag_ref
-        | complete
-    )
-    rm --recursive --force $directory
-    if $result.exit_code != 0 {
-        print --stderr ($result.stderr | str trim)
-        return $"release tag ($tag) is not signed by a key in ($trusted_ref):.git-signers"
-    }
-    null
-}
-
-def annotated-release-tag [tag: string] {
-    let tag_ref = $"refs/tags/($tag)"
-    let exists = (^git show-ref --verify --quiet $tag_ref | complete)
-    if $exists.exit_code != 0 {
-        fail $"release tag ($tag) is not present"
-    }
-    let object_type = (^git cat-file -t $tag_ref | str trim)
-    if $object_type != 'tag' {
-        fail $"release tag ($tag) must be annotated"
-    }
-    $tag_ref
 }
 
 # Capture repository and environment inputs once at the command boundary.
@@ -114,30 +47,6 @@ def image-context [revision_default: string] {
 def validate-revision [revision: string] {
     if not ($revision | is-empty) and not (is-git-revision $revision) {
         fail 'REVISION must be a full hexadecimal Git object ID'
-    }
-}
-
-# Release images record REVISION and their release version, so build them only
-# from that clean commit and only when a trusted release tag identifies it.
-def check-release-source [release: record, revision: string] {
-    let status = (^git status --porcelain | str trim)
-    if not ($status | is-empty) {
-        fail 'release builds require a clean worktree'
-    }
-    let head = (^git rev-parse HEAD | str trim)
-    if $revision != $head {
-        fail 'release builds require REVISION to be the checked-out commit'
-    }
-
-    let tag_ref = (annotated-release-tag $release.tag)
-    if (^git rev-list -n 1 $tag_ref | str trim) != $revision {
-        fail $"release tag ($release.tag) does not target REVISION"
-    }
-    let signature_error = (
-        release-signature-error $tag_ref refs/remotes/origin/main
-    )
-    if $signature_error != null {
-        fail $signature_error
     }
 }
 
@@ -334,26 +243,7 @@ def "main validate-release" [release_tag: string] {
     let release = (parse-release-tag $release_tag)
     check-release-snapshot $release (open --raw src/archlinux/VERSION | str trim)
 
-    let tag_ref = (annotated-release-tag $release.tag)
-
-    let tags = (local-release-tags $release.variant $release.date)
-    validate-release-sequence $release.variant $release.date $tags | ignore
-
-    let revision = (^git rev-list -n 1 $tag_ref | str trim)
-    let on_main = (
-        ^git merge-base --is-ancestor $revision refs/remotes/origin/main
-        | complete
-    )
-    if $on_main.exit_code != 0 {
-        fail $"release tag ($release.tag) does not target a commit on origin/main"
-    }
-
-    let signature_error = (
-        release-signature-error $tag_ref refs/remotes/origin/main
-    )
-    if $signature_error != null {
-        fail $signature_error
-    }
+    let revision = (check-pushed-release $release)
 
     let outputs = [
         $"date=($release.date)"
@@ -370,67 +260,7 @@ def "main release" [release_tag: string] {
     let release = (parse-release-tag $release_tag)
     check-release-snapshot $release (open --raw src/archlinux/VERSION | str trim)
 
-    let status = (^git status --porcelain | str trim)
-    if not ($status | is-empty) {
-        fail 'release tags require a clean worktree'
-    }
-
-    let branch = (^git symbolic-ref --quiet --short HEAD | complete)
-    if $branch.exit_code != 0 or ($branch.stdout | str trim) != 'main' {
-        fail 'release tags must be created from the main branch'
-    }
-
-    let remote_main = (
-        ^git ls-remote --heads origin refs/heads/main
-        | complete
-    )
-    if $remote_main.exit_code != 0 {
-        print --stderr ($remote_main.stderr | str trim)
-        exit $remote_main.exit_code
-    }
-    if ($remote_main.stdout | str trim | is-empty) {
-        fail 'origin/main is unavailable'
-    }
-    let remote_revision = (
-        $remote_main.stdout
-        | lines
-        | first
-        | split row (char tab)
-        | first
-    )
-    let revision = (^git rev-parse HEAD | str trim)
-    if $revision != $remote_revision {
-        fail 'main must exactly match origin/main before creating a release tag'
-    }
-
-    let local_tag = (
-        ^git show-ref --verify --quiet $"refs/tags/($release.tag)"
-        | complete
-    )
-    if $local_tag.exit_code == 0 {
-        fail $"release tag ($release.tag) already exists locally"
-    }
-
-    let remote_tags = (
-        remote-release-tags $release.variant $release.date
-    )
-    let sequences = (
-        validate-release-sequence $release.variant $release.date $remote_tags
-    )
-    let expected = ($sequences | length) + 1
-    if $release.sequence != $expected {
-        fail $"next release for ($release.variant) on ($release.date) must be archlinux/($release.variant)-($release.date)-($expected)"
-    }
-
-    ^git tag --sign --annotate $release.tag --message $"Release ($release.version)"
-    # HEAD matches live origin/main, so this applies the signers publication trusts.
-    let signature_error = (
-        release-signature-error $"refs/tags/($release.tag)" HEAD
-    )
-    if $signature_error != null {
-        ^git tag --delete $release.tag | ignore
-        fail $signature_error
-    }
+    create-release-tag $release
     print $"Created ($release.tag); push it with:"
     print $"git push origin refs/tags/($release.tag)"
 }

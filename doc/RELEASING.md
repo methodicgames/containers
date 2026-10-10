@@ -84,7 +84,7 @@ After reviewing the tag, push it using the command printed by
 publish.
 
 Release creation and publication share one set of release checks,
-defined in `bin/containers.nu`. A release tag must be annotated, follow
+defined in `bin/releases.nu`. A release tag must be annotated, follow
 its variant's gap-free sequence for the current snapshot, target a
 commit on `origin/main`, and carry a signature from a key in
 `.git-signers` on `origin/main`. Builds with `RELEASE_TAG` set and

@@ -204,6 +204,29 @@ def signature-rejections [] {
     assert equal (release-output $fixture) {}
 }
 
+# Builds read the release from the environment; publication takes it as an
+# argument.
+def release-source-invocation [command: string, tag: string] {
+    if $command == 'build' {
+        {arguments: [build dev], env: {RELEASE_TAG: $tag}}
+    } else {
+        {arguments: [publish $tag], env: {}}
+    }
+}
+
+def rejects-release-source [
+    fixture: record
+    command: string
+    tag: string
+    revision: string
+    message: string
+] {
+    let invocation = (release-source-invocation $command $tag)
+    with-env ($invocation.env | merge {REVISION: $revision}) {
+        fails (run-automation $fixture ...$invocation.arguments) $message
+    }
+}
+
 # Both commands must reject the source before building or contacting a registry.
 def release-build-source [] {
     let fixture = (release-fixture)
@@ -211,53 +234,45 @@ def release-build-source [] {
     cd $fixture.source
     let head = (^git rev-parse HEAD | str trim)
     let tag = 'archlinux/dev-2000.01.01-1'
-    # Builds read the release from the environment; publication takes it as an
-    # argument.
-    let cases = [
-        {command: [build dev], env: {RELEASE_TAG: $tag}}
-        {command: [publish $tag], env: {}}
-    ]
 
-    for case in $cases {
-        let command = $case.command
-        let release = ($case.env | merge {REVISION: $head})
-
+    for command in [build publish] {
         'draft' | save untracked.txt
-        with-env $release {
-            fails (run-automation $fixture ...$command) 'require a clean worktree'
-        }
+        rejects-release-source $fixture $command $tag $head 'require a clean worktree'
         rm untracked.txt
 
         local-commit
-        with-env $release {
-            fails (run-automation $fixture ...$command) 'require REVISION to be the checked-out commit'
-        }
+        rejects-release-source $fixture $command $tag $head 'require REVISION to be the checked-out commit'
         ^git reset --quiet --hard $head
 
-        with-env $release {
-            fails (run-automation $fixture ...$command) 'is not present'
-        }
+        rejects-release-source $fixture $command $tag $head 'is not present'
 
         ^git tag $tag
-        with-env $release {
-            fails (run-automation $fixture ...$command) 'must be annotated'
-        }
+        rejects-release-source $fixture $command $tag $head 'must be annotated'
         ^git tag --delete $tag | ignore
 
         # The tag must identify the commit whose source the image records.
         signed-tag $tag
         local-commit
-        let moved = ($release | merge {REVISION: (^git rev-parse HEAD | str trim)})
-        with-env $moved {
-            fails (run-automation $fixture ...$command) 'does not target REVISION'
-        }
+        let moved = (^git rev-parse HEAD | str trim)
+        rejects-release-source $fixture $command $tag $moved 'does not target REVISION'
         ^git reset --quiet --hard $head
         ^git tag --delete $tag | ignore
 
         signed-tag $tag --key $fixture.untrusted_key
-        with-env $release {
-            fails (run-automation $fixture ...$command) 'is not signed by a key in refs/remotes/origin/main:.git-signers'
-        }
+        rejects-release-source $fixture $command $tag $head 'is not signed by a key in refs/remotes/origin/main:.git-signers'
+        ^git tag --delete $tag | ignore
+
+        # Builds and publication apply the same pushed-tag checks as the workflow.
+        let gap = 'archlinux/dev-2000.01.01-2'
+        signed-tag $gap
+        rejects-release-source $fixture $command $gap $head 'skips 1'
+        ^git tag --delete $gap | ignore
+
+        local-commit
+        signed-tag $tag
+        let unpublished = (^git rev-parse HEAD | str trim)
+        rejects-release-source $fixture $command $tag $unpublished 'does not target a commit on origin/main'
+        ^git reset --quiet --hard $head
         ^git tag --delete $tag | ignore
     }
 }

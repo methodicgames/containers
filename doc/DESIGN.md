@@ -15,6 +15,8 @@ SPDX-License-Identifier: 0BSD
 - `justfile` owns the public automation interface.
 - `bin/containers.nu` coordinates repository automation.
 - `bin/versions.nu` owns snapshot, version, and release-tag parsing.
+- `bin/releases.nu` owns release-tag trust: creation, sequence,
+  ancestry, signature, and release-source checks.
 - `bin/publication.nu` owns publication and alias policy.
 - `bin/registry.nu` owns registry authentication and transport.
 - `bin/smoke.nu` orchestrates image checks; `bin/runtime-checks.nu`
