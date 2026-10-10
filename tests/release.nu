@@ -211,9 +211,17 @@ def release-build-source [] {
     cd $fixture.source
     let head = (^git rev-parse HEAD | str trim)
     let tag = 'archlinux/dev-2000.01.01-1'
-    let release = {RELEASE_TAG: $tag, REVISION: $head}
+    # Builds read the release from the environment; publication takes it as an
+    # argument.
+    let cases = [
+        {command: [build dev], env: {RELEASE_TAG: $tag}}
+        {command: [publish $tag], env: {}}
+    ]
 
-    for command in [[build dev] [publish dev]] {
+    for case in $cases {
+        let command = $case.command
+        let release = ($case.env | merge {REVISION: $head})
+
         'draft' | save untracked.txt
         with-env $release {
             fails (run-automation $fixture ...$command) 'require a clean worktree'
@@ -239,7 +247,7 @@ def release-build-source [] {
         # The tag must identify the commit whose source the image records.
         signed-tag $tag
         local-commit
-        let moved = {RELEASE_TAG: $tag, REVISION: (^git rev-parse HEAD | str trim)}
+        let moved = ($release | merge {REVISION: (^git rev-parse HEAD | str trim)})
         with-env $moved {
             fails (run-automation $fixture ...$command) 'does not target REVISION'
         }

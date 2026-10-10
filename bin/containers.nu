@@ -22,16 +22,6 @@ def variants [requested: string] {
     fail $"unknown variant ($requested); expected base, dev, or all" 2
 }
 
-def publication-variants [requested: string, release_variant: string] {
-    if $requested == 'all' {
-        return [$release_variant]
-    }
-    if $requested != $release_variant {
-        fail $"release tag selects ($release_variant), not ($requested)"
-    }
-    [$requested]
-}
-
 def local-release-tags [variant: string, date: string] {
     ^git tag --list $"archlinux/($variant)-($date)-*"
     | lines
@@ -464,19 +454,16 @@ def "main build" [requested: string = 'all'] {
     }
 }
 
-def "main tag" [requested: string = 'all'] {
+def "main tag" [release_tag: string] {
+    load-env {RELEASE_TAG: $release_tag}
     let image_context = (image-context '')
     validate-revision $image_context.revision
-    if $image_context.release == null {
-        fail 'RELEASE_TAG is required to create publication aliases'
-    }
 
-    for target in (publication-variants $requested $image_context.release.variant) {
-        let source = $"($image_context.image):($target)-($image_context.version)"
-        ^podman image exists $source
-        for alias in (release-aliases $target $image_context.version) {
-            ^podman tag $source $"($image_context.image):($alias.tag)"
-        }
+    let target = $image_context.release.variant
+    let source = $"($image_context.image):($target)-($image_context.version)"
+    ^podman image exists $source
+    for alias in (release-aliases $target $image_context.version) {
+        ^podman tag $source $"($image_context.image):($alias.tag)"
     }
 }
 
@@ -559,15 +546,13 @@ def "main smoke-published" [release_tag: string] {
     }
 }
 
-def "main publish" [requested: string = 'all'] {
+# The argument selects the release; nested validation reads it as RELEASE_TAG.
+def "main publish" [release_tag: string] {
+    load-env {RELEASE_TAG: $release_tag}
     let image_context = (image-context '')
-    if $image_context.release == null {
-        fail 'RELEASE_TAG is required to publish images'
-    }
     if not (is-git-revision $image_context.revision) {
         fail 'publication requires REVISION as a full Git object ID'
     }
-    publication-variants $requested $image_context.release.variant | ignore
     check-release-source $image_context.release $image_context.revision
 
     let expected = {

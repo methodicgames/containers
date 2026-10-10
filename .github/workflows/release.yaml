@@ -68,9 +68,8 @@ jobs:
       - name: Publish or Resume and Verify Anonymously
         id: publication
         env:
-          RELEASE_VARIANT: ${{ steps.release.outputs.variant }}
           REVISION: ${{ steps.release.outputs.revision }}
-        run: just publish $env.RELEASE_VARIANT
+        run: just publish $env.RELEASE_TAG
 
   actions-job-smoke:
     name: GitHub Actions Job Container

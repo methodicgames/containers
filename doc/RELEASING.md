@@ -99,16 +99,15 @@ for `base` and `dev`, including anonymous verification, and pending
 releases are queued. It grants registry-write permission only to the
 publication job.
 
-The lower-level `just tag` and `just publish` recipes default to the
-variant selected by `RELEASE_TAG`; an explicit variant must match it.
+The lower-level `just tag` and `just publish` recipes take the release
+tag as their argument and act on the variant it selects.
 
-`just publish` is the authenticated lower-level operation used by the
-release workflow. It requires
-`RELEASE_TAG=archlinux/<variant>-YYYY.MM.DD-N` and `REVISION`
-containing the full tagged Git commit ID. Registry requests use the
-credentials written by `podman login`. `REGISTRY_AUTH_FILE` takes
-precedence over `DOCKER_CONFIG`; either selects an exclusive file.
-Otherwise, lookup checks the runtime auth file, then
+`just publish archlinux/<variant>-YYYY.MM.DD-N` is the authenticated
+lower-level operation used by the release workflow. It requires
+`REVISION` containing the full tagged Git commit ID. Registry requests
+use the credentials written by `podman login`. `REGISTRY_AUTH_FILE`
+takes precedence over `DOCKER_CONFIG`; either selects an exclusive
+file. Otherwise, lookup checks the runtime auth file, then
 `XDG_CONFIG_HOME/containers/auth.json` (defaulting to
 `~/.config/containers/auth.json`), then `~/.docker/config.json`. The
 registry client supports basic authentication and bearer tokens issued
@@ -175,7 +174,7 @@ release image independently, run
 commit ID; this command honors `IMAGE`.
 
 Keep production publication in the serialized release workflow. Manual
-`just publish` invocations require the original `RELEASE_TAG`, tagged
+`just publish` invocations require the original release tag, tagged
 `REVISION`, a current `origin/main`, and registry authentication, and
 they pass the same [release checks](#publish) as the workflow; they
 must not overlap a production publisher. Test alternative registries
