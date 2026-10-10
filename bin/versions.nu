@@ -36,7 +36,14 @@ export def parse-published-version [version: string] {
     }
 }
 
+# OCI tag of one variant build. A release's tag is immutable and equals its Git
+# release tag without the archlinux/ namespace; local builds use version local.
+export def image-tag [variant: string, version: string] {
+    $"($variant)-($version)"
+}
+
 # Parsing does not consult VERSION. Callers enforce their snapshot requirement.
+# The record's tag is the Git release tag; image_tag is its OCI counterpart.
 export def parse-release-tag [release_tag: string] {
     let pattern = '^archlinux/(?<variant>base|dev)-(?<version>.+)$'
     let matches = ($release_tag | parse --regex $pattern)
@@ -51,6 +58,7 @@ export def parse-release-tag [release_tag: string] {
 
     {
         tag: $release_tag
+        image_tag: (image-tag $parts.variant $parts.version)
         variant: $parts.variant
         date: $version.date
         sequence: $version.sequence

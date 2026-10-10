@@ -3,7 +3,7 @@
 
 # Host-side image checks. Call through the public Just recipes.
 
-use versions.nu parse-snapshot
+use versions.nu [image-tag parse-snapshot]
 
 # Images inherit upstream labels; new upstream OCI labels must be reviewed.
 const oci_labels = [
@@ -133,7 +133,7 @@ def check-development-image [image_ref: string, source: path] {
 
 # Context supplies image, version, revision, and snapshot; source is the repo root.
 export def smoke-image [image_context: record, variant: string, source: path] {
-    let image_ref = $"($image_context.image):($variant)-($image_context.version)"
+    let image_ref = $"($image_context.image):(image-tag $variant $image_context.version)"
 
     check-root $image_ref
     check-mirror $image_ref $image_context.snapshot

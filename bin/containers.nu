@@ -130,7 +130,7 @@ def "main validate" [] {
     ^nu --no-config-file bin/containers.nu smoke
 
     let image_context = (image-context 'local')
-    let lint_image = $"($image_context.image):dev-($image_context.version)"
+    let lint_image = $"($image_context.image):(image-tag dev $image_context.version)"
     (
         ^podman run --rm
             --volume $"((pwd)):/src:ro"
@@ -267,7 +267,7 @@ def "main build" [requested: string = 'all'] {
                 --target $target
                 --build-arg $"VERSION=($image_context.version)"
                 --build-arg $"REVISION=($image_context.revision)"
-                --tag $"($image_context.image):($target)-($image_context.version)"
+                --tag $"($image_context.image):(image-tag $target $image_context.version)"
                 src/archlinux
         )
     }
@@ -275,10 +275,10 @@ def "main build" [requested: string = 'all'] {
 
 def "main tag" [release_tag: string] {
     let image_context = (image-context '' --release-tag $release_tag)
-    let target = $image_context.release.variant
-    let source = $"($image_context.image):($target)-($image_context.version)"
+    let release = $image_context.release
+    let source = $"($image_context.image):($release.image_tag)"
     ^podman image exists $source
-    for alias in (release-aliases $target $image_context.version) {
+    for alias in (release-aliases $release.variant $release.version) {
         ^podman tag $source $"($image_context.image):($alias.tag)"
     }
 }
@@ -340,17 +340,16 @@ def "main smoke-published" [release_tag: string] {
     let release = $image_context.release
     let image = $image_context.image
     let client = (registry-context $image --anonymous)
-    let tag = $"($release.variant)-($release.version)"
-    let artifact = (lookup-artifact $client $tag)
+    let artifact = (lookup-artifact $client $release.image_tag)
     if $artifact == null {
-        fail $"release ($tag) is absent"
+        fail $"release ($release.image_tag) is absent"
     }
 
     check-artifact $artifact $release
     if $artifact.version != $release.version {
         fail 'release version mismatch'
     }
-    anonymous-verify $image $tag $artifact.digest
+    anonymous-verify $image $release.image_tag $artifact.digest
 
     let lookup = {|tag| lookup-artifact $client $tag }
     let decisions = (plan-aliases $artifact $lookup)
@@ -380,7 +379,7 @@ def "main publish" [release_tag: string] {
     }
 
     let client = (registry-context $image_context.image)
-    let receipt_path = $"dst/publication/($expected.variant)-($expected.version).json"
+    let receipt_path = $"dst/publication/($image_context.release.image_tag).json"
     let backend = {
         lookup: {|tag| lookup-artifact $client $tag }
         create: {|tag|
@@ -405,7 +404,7 @@ def "main publish" [release_tag: string] {
         smoke: {|artifact|
             let reference = $"($image_context.image)@($artifact.digest)"
             ^podman pull --tls-verify=(not $client.loopback) $reference
-            ^podman tag $reference $"($image_context.image):($artifact.variant)-($artifact.version)"
+            ^podman tag $reference $"($image_context.image):(image-tag $artifact.variant $artifact.version)"
             ^just smoke-release $image_context.release.tag $artifact.revision
         }
         promote: {|tag, artifact| promote-manifest $client $tag $artifact }

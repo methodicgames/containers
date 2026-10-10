@@ -25,6 +25,8 @@ def release-parsing [] {
     assert equal $release.variant 'dev'
     assert equal $release.version '2026.09.01-10'
     assert equal $release.sequence 10
+    # The OCI tag is the Git tag without its namespace.
+    assert equal $release.image_tag 'dev-2026.09.01-10'
     check-release-snapshot $release '20260901'
 
     rejects { check-release-snapshot $release '20260902' } 'must match Arch snapshot'

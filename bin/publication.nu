@@ -74,8 +74,8 @@ export def plan-aliases [candidate: record, lookup: closure] {
         let action = (alias-action $current $candidate --dated=$alias.dated)
 
         if $current != null {
-            let release_tag = $"($current.variant)-($current.version)"
-            let reference = (do $lookup $release_tag)
+            let immutable_tag = (image-tag $current.variant $current.version)
+            let reference = (do $lookup $immutable_tag)
             if $reference == null or $reference.digest != $current.digest {
                 error make {msg: $"alias ($alias.tag) does not match its immutable release"}
             }
@@ -100,10 +100,10 @@ export def plan-aliases [candidate: record, lookup: closure] {
 # - receipt(record) -> persist progress; it is diagnostic, not recovery input.
 # Callback failures propagate, leaving registry state available for a retry.
 export def publish-release [expected: record, backend: record] {
-    let release_tag = $"($expected.variant)-($expected.version)"
-    let existing = (do $backend.lookup $release_tag)
+    let immutable_tag = (image-tag $expected.variant $expected.version)
+    let existing = (do $backend.lookup $immutable_tag)
     let artifact = if $existing == null {
-        do $backend.create $release_tag
+        do $backend.create $immutable_tag
     } else {
         $existing
     }
@@ -111,7 +111,7 @@ export def publish-release [expected: record, backend: record] {
 
     mut receipt = {
         image: $expected.image
-        release: $release_tag
+        release: $immutable_tag
         revision: $expected.revision
         digest: $artifact.digest
         status: 'pending'
@@ -123,7 +123,7 @@ export def publish-release [expected: record, backend: record] {
     let decisions = (plan-aliases $artifact $backend.lookup)
     $receipt.aliases = $decisions
     do $backend.receipt $receipt
-    do $backend.verify $release_tag $artifact.digest
+    do $backend.verify $immutable_tag $artifact.digest
 
     for decision in $decisions {
         if $decision.action == 'promote' {
