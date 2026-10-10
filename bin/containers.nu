@@ -9,6 +9,11 @@ use releases.nu *
 use versions.nu *
 use smoke.nu smoke-image
 
+const version_file = 'src/archlinux/VERSION'
+const containerfile = 'src/archlinux/Containerfile'
+const image_pin = 'ARG ARCH_IMAGE='
+const default_image = 'ghcr.io/methodicgames/archlinux'
+
 def variants [requested: string] {
     if $requested == 'all' {
         return ['base', 'dev']
@@ -19,30 +24,34 @@ def variants [requested: string] {
     fail $"unknown variant ($requested); expected base, dev, or all" 2
 }
 
+def arch-snapshot [] {
+    open --raw $version_file | str trim
+}
+
+# A release tag selects a release of the current Arch snapshot.
+def current-release [release_tag: string] {
+    let release = (parse-release-tag $release_tag)
+    check-release-snapshot $release (arch-snapshot)
+    $release
+}
+
 # Capture repository and environment inputs once at the command boundary.
-def image-context [revision_default: string] {
-    let snapshot = (open --raw src/archlinux/VERSION | str trim)
-    let release_tag = ($env.RELEASE_TAG? | default '')
+# Commands that take a release tag pass it; others read RELEASE_TAG, which
+# publication exports for its nested validation build.
+def image-context [revision_default: string, --release-tag: string] {
+    let release_tag = ($release_tag | default ($env.RELEASE_TAG? | default ''))
     let release = if ($release_tag | is-empty) {
         null
     } else {
-        let parsed = (parse-release-tag $release_tag)
-        check-release-snapshot $parsed $snapshot
-        $parsed
+        current-release $release_tag
     }
 
     {
-        image: ($env.IMAGE? | default 'ghcr.io/methodicgames/archlinux')
-        snapshot: $snapshot
+        image: ($env.IMAGE? | default $default_image)
+        snapshot: (arch-snapshot)
         release: $release
         version: (if $release == null { 'local' } else { $release.version })
         revision: ($env.REVISION? | default $revision_default)
-    }
-}
-
-def validate-revision [revision: string] {
-    if not ($revision | is-empty) and not (is-git-revision $revision) {
-        fail 'REVISION must be a full hexadecimal Git object ID'
     }
 }
 
@@ -51,9 +60,6 @@ def markdown-files [] {
     | lines
     | where {|file| not ($file | is-empty) and ($file | path exists) }
 }
-
-const containerfile = 'src/archlinux/Containerfile'
-const image_pin = 'ARG ARCH_IMAGE='
 
 def archive-url [snapshot: string] {
     $"archive.archlinux.org/repos/((parse-snapshot $snapshot).path)/"
@@ -84,7 +90,7 @@ def arch-pins [content: string] {
 }
 
 def validate-source [] {
-    let snapshot = (open --raw src/archlinux/VERSION | str trim)
+    let snapshot = (arch-snapshot)
     let content = (open --raw $containerfile)
     let pins = (arch-pins $content)
     if $pins.image_snapshot > $snapshot {
@@ -207,11 +213,10 @@ def "main update-arch" [snapshot: string] {
     let archive = (check-archive-snapshot $snapshot)
     let entry = (latest-arch-image $snapshot)
 
-    let version_file = 'src/archlinux/VERSION'
     let upstream = $"docker.io/archlinux/archlinux:($entry.name)@($entry.digest)"
     let content = (open --raw $containerfile)
     let pins = (arch-pins $content)
-    let version_is_current = (open --raw $version_file | str trim) == $snapshot
+    let version_is_current = (arch-snapshot) == $snapshot
     if $pins.image == $upstream and $pins.archive == $archive and $version_is_current {
         print $"Arch inputs are already current for ($snapshot)"
         return
@@ -228,9 +233,7 @@ def "main update-arch" [snapshot: string] {
 }
 
 def "main validate-release" [release_tag: string] {
-    let release = (parse-release-tag $release_tag)
-    check-release-snapshot $release (open --raw src/archlinux/VERSION | str trim)
-
+    let release = (current-release $release_tag)
     let revision = (check-pushed-release $release)
 
     let outputs = [
@@ -245,9 +248,7 @@ def "main validate-release" [release_tag: string] {
 }
 
 def "main release" [release_tag: string] {
-    let release = (parse-release-tag $release_tag)
-    check-release-snapshot $release (open --raw src/archlinux/VERSION | str trim)
-
+    let release = (current-release $release_tag)
     create-release-tag $release
     print $"Created ($release.tag); push it with:"
     print $"git push origin refs/tags/($release.tag)"
@@ -273,10 +274,7 @@ def "main build" [requested: string = 'all'] {
 }
 
 def "main tag" [release_tag: string] {
-    load-env {RELEASE_TAG: $release_tag}
-    let image_context = (image-context '')
-    validate-revision $image_context.revision
-
+    let image_context = (image-context '' --release-tag $release_tag)
     let target = $image_context.release.variant
     let source = $"($image_context.image):($target)-($image_context.version)"
     ^podman image exists $source
@@ -299,6 +297,7 @@ def "main smoke-job" [] {
 }
 
 def "main smoke-release" [release_tag: string, revision: string] {
+    # A historical release may predate the current snapshot.
     let release = (parse-release-tag $release_tag)
     if not (is-git-revision $revision) {
         fail 'release smoke requires a full Git commit ID'
@@ -337,9 +336,9 @@ def anonymous-verify [image: string, tag: string, digest: string] {
 }
 
 def "main smoke-published" [release_tag: string] {
-    let release = (parse-release-tag $release_tag)
-    check-release-snapshot $release (open --raw src/archlinux/VERSION | str trim)
-    let image = ($env.IMAGE? | default 'ghcr.io/methodicgames/archlinux')
+    let image_context = (image-context '' --release-tag $release_tag)
+    let release = $image_context.release
+    let image = $image_context.image
     let client = (registry-context $image --anonymous)
     let tag = $"($release.variant)-($release.version)"
     let artifact = (lookup-artifact $client $tag)
@@ -364,10 +363,10 @@ def "main smoke-published" [release_tag: string] {
     }
 }
 
-# The argument selects the release; nested validation reads it as RELEASE_TAG.
 def "main publish" [release_tag: string] {
+    # Nested validation builds and smoke-tests the release named by RELEASE_TAG.
     load-env {RELEASE_TAG: $release_tag}
-    let image_context = (image-context '')
+    let image_context = (image-context '' --release-tag $release_tag)
     if not (is-git-revision $image_context.revision) {
         fail 'publication requires REVISION as a full Git object ID'
     }
