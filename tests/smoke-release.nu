@@ -82,7 +82,7 @@ def smoke-failure-propagation [] {
     let fixture = (historical-fixture)
     cd $fixture.source
 
-    let failure = (with-env {SMOKE_RECEIPT: $fixture.receipt, FAIL_RELEASE_SMOKE: 'yes'} {
+    let result = (with-env {SMOKE_RECEIPT: $fixture.receipt, FAIL_RELEASE_SMOKE: 'yes'} {
         (
             ^nu --no-config-file $fixture.automation smoke-release
                 archlinux/dev-2000.01.01-1 $fixture.revision
@@ -90,8 +90,7 @@ def smoke-failure-propagation [] {
         )
     })
 
-    assert ($failure.exit_code != 0)
-    assert ($failure.stderr | str contains 'injected historical smoke failure')
+    fails $result 'injected historical smoke failure'
 }
 
 def main [] {

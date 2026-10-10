@@ -62,19 +62,6 @@ def run-automation [fixture: record, ...arguments: string] {
     ^nu --no-config-file $fixture.automation ...$arguments | complete
 }
 
-def succeeds [result: record] {
-    assert equal $result.exit_code 0 $"unexpected failure: ($result.stderr)"
-}
-
-# The context names the command when one scenario checks several.
-def fails [result: record, message: string, --context: string = ''] {
-    let prefix = if $context == '' { '' } else { $"($context): " }
-    assert ($result.exit_code != 0) $"($prefix)expected failure: ($message)"
-    assert ($result.stderr | str contains $message) (
-        $"($prefix)expected failure: ($message); got: ($result.stderr)"
-    )
-}
-
 def signed-tag [tag: string, --key: string] {
     let options = if $key == null { [] } else { ['-c', $"user.signingKey=($key)"] }
     ^git ...$options tag --sign --annotate $tag --message $"Release ($tag)"
