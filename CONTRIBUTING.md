@@ -160,8 +160,10 @@ about its style.
 Do not edit generated artifacts directly.
 
 To add another image family, place its Containerfile and version
-metadata under `src/`, extend `bin/containers.nu`, and update the
-publication workflow without duplicating the public Just interface.
+metadata under `src/<family>/`. Release tags, release checks, smoke
+tests, and workflows currently assume the Arch family and its variants,
+so generalize those rules without duplicating the public Just
+interface.
 
 ## Change Workflow
 
