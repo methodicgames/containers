@@ -3,7 +3,7 @@
 
 # Host-side image checks. Call through the public Just recipes.
 
-use versions.nu [image-tag parse-snapshot]
+use versions.nu [build-version image-tag parse-snapshot]
 
 # Images inherit upstream labels; new upstream OCI labels must be reviewed.
 const oci_labels = [
@@ -67,7 +67,7 @@ def check-package-state [image_ref: string] {
     }
 }
 
-def check-image-metadata [image_ref: string, variant: string, image_context: record] {
+def check-image-metadata [image_ref: string, variant: string, version: string, revision: string] {
     let details = (^podman image inspect $image_ref | from json | first)
     let labels = $details.Labels
 
@@ -77,10 +77,10 @@ def check-image-metadata [image_ref: string, variant: string, image_context: rec
     if ($labels | get 'games.methodic.containers.variant') != $variant {
         error make {msg: $"($image_ref) has an unexpected variant label"}
     }
-    if ($labels | get 'org.opencontainers.image.version') != $image_context.version {
+    if ($labels | get 'org.opencontainers.image.version') != $version {
         error make {msg: $"($image_ref) has an unexpected version label"}
     }
-    if ($labels | get 'org.opencontainers.image.revision') != $image_context.revision {
+    if ($labels | get 'org.opencontainers.image.revision') != $revision {
         error make {msg: $"($image_ref) has an unexpected revision label"}
     }
     if ($labels | get 'org.opencontainers.image.source') != 'https://github.com/methodicgames/containers' {
@@ -131,14 +131,15 @@ def check-development-image [image_ref: string, source: path] {
     run-with-source $image_ref $source ['reuse' 'lint']
 }
 
-# Context supplies image, version, revision, and snapshot; source is the repo root.
+# Context supplies image, release, revision, and snapshot; source is the repo root.
 export def smoke-image [image_context: record, variant: string, source: path] {
-    let image_ref = $"($image_context.image):(image-tag $variant $image_context.version)"
+    let version = (build-version $image_context.release $variant)
+    let image_ref = $"($image_context.image):(image-tag $variant $version)"
 
     check-root $image_ref
     check-mirror $image_ref $image_context.snapshot
     check-package-state $image_ref
-    check-image-metadata $image_ref $variant $image_context
+    check-image-metadata $image_ref $variant $version $image_context.revision
 
     if $variant == 'dev' {
         check-development-image $image_ref $source

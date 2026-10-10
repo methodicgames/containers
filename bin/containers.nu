@@ -279,8 +279,7 @@ def "main smoke" [requested: string = 'all'] {
     let source = (pwd)
 
     for variant in (variants $requested) {
-        let version = (build-version $image_context.release $variant)
-        smoke-image ($image_context | insert version $version) $variant $source
+        smoke-image $image_context $variant $source
     }
 }
 
