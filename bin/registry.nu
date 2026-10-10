@@ -35,12 +35,21 @@ def connection [client: record, side: string = ''] {
     }
 }
 
+# Talk to the image's own registry: host registries.conf mirrors could serve
+# stale reads or turn a registry failure into a mirror's "manifest unknown".
+# The timeout keeps a stalled registry from holding the publication lock.
+def --wrapped skopeo [...arguments: string] {
+    with-env {CONTAINERS_REGISTRIES_CONF: '/dev/null'} {
+        hide-env --ignore-errors CONTAINERS_REGISTRIES_CONF_OVERRIDE
+        ^skopeo --command-timeout 5m ...$arguments | complete
+    }
+}
+
 def inspect-raw [client: record, reference: string, --config] {
     let target = if $config { ['--config'] } else { [] }
     (
-        ^skopeo inspect --raw ...$target ...(connection $client)
+        skopeo inspect --raw ...$target ...(connection $client)
             $"docker://($client.image)($reference)"
-        | complete
     )
 }
 
@@ -102,11 +111,10 @@ export def lookup-artifact [client: record, tag: string] {
 export def promote-manifest [client: record, tag: string, artifact: record] {
     # Retag the exact release manifest; skopeo fails rather than convert it.
     let result = (
-        ^skopeo copy --quiet --preserve-digests
+        skopeo copy --quiet --preserve-digests
             ...(connection $client 'src-') ...(connection $client 'dest-')
             $"docker://($client.image)@($artifact.digest)"
             $"docker://($client.image):($tag)"
-        | complete
     )
     require-success $result 'registry alias update failed' | ignore
 

@@ -149,6 +149,24 @@ def publication-recovery [fixture: record] {
     assert equal (open $state_file | get promotions) 2
 }
 
+# Host registry configuration can redirect reads to a stale mirror or block the
+# registry; registry access must reach the image's own registry regardless.
+def host-registry-configuration [fixture: record, directory: path] {
+    publish-release $fixture.expected $fixture.backend | ignore
+    let client = $fixture.client
+    let blocking = ($directory | path join 'registries.conf')
+    let host = ($client.image | split row '/' | first)
+    $"[[registry]]\nlocation = \"($host)\"\nblocked = true\n" | save $blocking
+
+    for variable in ['CONTAINERS_REGISTRIES_CONF' 'CONTAINERS_REGISTRIES_CONF_OVERRIDE'] {
+        with-env {$variable: $blocking} {
+            assert equal (lookup-artifact $client 'base-2026.09.02-1') null
+            let artifact = (lookup-artifact $client 'base-2026.09.01-2')
+            promote-manifest $client 'configuration-test' $artifact
+        }
+    }
+}
+
 def authentication [source_image: string, directory: path] {
     let authdir = ($directory | path join 'auth' | path expand)
     mkdir $authdir
@@ -249,6 +267,11 @@ def main [] {
         'publication recovery': {
             with-publication-fixture {|fixture, directory|
                 publication-recovery $fixture
+            }
+        }
+        'host registry configuration': {
+            with-publication-fixture {|fixture, directory|
+                host-registry-configuration $fixture $directory
             }
         }
         'authentication and credential isolation': {
