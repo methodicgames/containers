@@ -19,6 +19,9 @@ jobs:
       queue: max
       cancel-in-progress: false
     runs-on: ubuntu-24.04
+    # Releases take minutes; bound a stalled registry or build so it cannot
+    # hold the per-variant publication lock for the default six hours.
+    timeout-minutes: 30
     defaults:
       run:
         shell: nu {0}
@@ -76,6 +79,7 @@ jobs:
     if: needs.publish.outputs.variant == 'dev'
     needs: publish
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     defaults:
       run:
         shell: nu {0}

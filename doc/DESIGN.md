@@ -66,15 +66,16 @@ must come from a key listed in `.git-signers` on `origin/main`, so
 release trust follows reviewed history rather than every key a hosting
 account has registered, and removing a key there revokes it for later
 publication runs. Publication is serialized per variant across snapshot
-dates, with queued runs and no cancellation of an active publisher. The
-first successful versioned manifest is authoritative; retries validate
-its metadata and resume from that digest. Only a registry report that
-the release manifest is unknown allows an initial upload; skopeo does
-not reliably distinguish that case by exit status, so lookup matches
-its message. Registry access ignores host `registries.conf` settings,
-so a mirror cannot answer for the registry or mask its failure.
-Authentication failures, transport errors, and unrecognized messages
-stop work.
+dates, with queued runs and no cancellation of an active publisher. A
+job time limit ends a stalled publisher so it cannot hold the lock for
+hours. The first successful versioned manifest is authoritative;
+retries validate its metadata and resume from that digest. Only a
+registry report that the release manifest is unknown allows an initial
+upload; skopeo does not reliably distinguish that case by exit status,
+so lookup matches its message. Registry access ignores host
+`registries.conf` settings, so a mirror cannot answer for the registry
+or mask its failure. Authentication failures, transport errors, and
+unrecognized messages stop work.
 
 Publication inspects both aliases before changing either. Date aliases
 advance by sequence within their date; floating aliases advance by date

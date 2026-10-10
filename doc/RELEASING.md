@@ -97,7 +97,8 @@ The workflow publishes the selected variant's immutable release tag,
 date alias, and floating alias. Publication is serialized separately
 for `base` and `dev`, including anonymous verification, and pending
 releases are queued. It grants registry-write permission only to the
-publication job.
+publication job. A job time limit ends a stalled publication, which can
+then be retried as described under [Recovery](#recovery).
 
 `just publish archlinux/<variant>-YYYY.MM.DD-N` is the authenticated
 lower-level operation used by the release workflow. It acts on the
