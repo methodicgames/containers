@@ -35,14 +35,18 @@ def connection [client: record, side: string = ''] {
     }
 }
 
-# Talk to the image's own registry: host registries.conf mirrors could serve
+# Reach the image's own registry: host registries.conf mirrors could serve
 # stale reads or turn a registry failure into a mirror's "manifest unknown".
-# The timeout keeps a stalled registry from holding the publication lock.
-def --wrapped skopeo [...arguments: string] {
+export def without-host-registries [operation: closure] {
     with-env {CONTAINERS_REGISTRIES_CONF: '/dev/null'} {
         hide-env --ignore-errors CONTAINERS_REGISTRIES_CONF_OVERRIDE
-        ^skopeo --command-timeout 5m ...$arguments | complete
+        do $operation
     }
+}
+
+# The timeout keeps a stalled registry from holding the publication lock.
+def --wrapped skopeo [...arguments: string] {
+    without-host-registries { ^skopeo --command-timeout 5m ...$arguments | complete }
 }
 
 def inspect-raw [client: record, reference: string, --config] {

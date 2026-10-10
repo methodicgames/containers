@@ -317,11 +317,13 @@ def anonymous-verify [image: string, tag: string, digest: string] {
     let authfile = '.tmp/anonymous-pull/auth.json'
     mkdir ($authfile | path dirname)
     '{"auths":{}}' | save --force $authfile
-    (
-        ^podman pull --authfile $authfile
-            --tls-verify=(not $client.loopback)
-            $"($image)@($digest)"
-    )
+    without-host-registries {
+        (
+            ^podman pull --authfile $authfile
+                --tls-verify=(not $client.loopback)
+                $"($image)@($digest)"
+        )
+    }
     verify-manifest $client $tag $digest
 }
 
