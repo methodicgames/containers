@@ -42,6 +42,16 @@ export def image-tag [variant: string, version: string] {
     $"($variant)-($version)"
 }
 
+# Version of one variant's build. A release versions only its own variant; the
+# other variant, built alongside it for validation, remains a local build.
+export def build-version [release: any, variant: string] {
+    if $release != null and $release.variant == $variant {
+        $release.version
+    } else {
+        'local'
+    }
+}
+
 # Parsing does not consult VERSION. Callers enforce their snapshot requirement.
 # The record's tag is the Git release tag; image_tag is its OCI counterpart.
 export def parse-release-tag [release_tag: string] {

@@ -62,6 +62,14 @@ def release-sequences [] {
     } 'does not belong'
 }
 
+def build-versions [] {
+    let release = (parse-release-tag 'archlinux/dev-2026.09.01-2')
+    assert equal (build-version $release dev) '2026.09.01-2'
+    # The other variant built for the same validation is not that release.
+    assert equal (build-version $release base) 'local'
+    assert equal (build-version null dev) 'local'
+}
+
 def alias-descriptors [] {
     assert equal (release-aliases dev '2026.09.01-10') [
         {tag: 'dev-2026.09.01', dated: true}
@@ -75,6 +83,7 @@ def main [] {
         'release parsing and snapshot validation': { release-parsing }
         'full Git revision identities': { revision-identities }
         'gap-free release sequences': { release-sequences }
+        'per-variant build versions': { build-versions }
         'explicit alias scopes': { alias-descriptors }
     }
 }

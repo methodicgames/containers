@@ -50,7 +50,6 @@ def image-context [revision_default: string, --release-tag: string] {
         image: ($env.IMAGE? | default $default_image)
         snapshot: (arch-snapshot)
         release: $release
-        version: (if $release == null { 'local' } else { $release.version })
         revision: ($env.REVISION? | default $revision_default)
     }
 }
@@ -130,7 +129,8 @@ def "main validate" [] {
     ^nu --no-config-file bin/containers.nu smoke
 
     let image_context = (image-context 'local')
-    let lint_image = $"($image_context.image):(image-tag dev $image_context.version)"
+    let lint_version = (build-version $image_context.release dev)
+    let lint_image = $"($image_context.image):(image-tag dev $lint_version)"
     (
         ^podman run --rm
             --volume $"((pwd)):/src:ro"
@@ -260,14 +260,15 @@ def "main build" [requested: string = 'all'] {
         check-release-source $image_context.release $image_context.revision
     }
     for target in (variants $requested) {
+        let version = (build-version $image_context.release $target)
         (
             ^podman build
                 --file $containerfile
                 --platform linux/amd64
                 --target $target
-                --build-arg $"VERSION=($image_context.version)"
+                --build-arg $"VERSION=($version)"
                 --build-arg $"REVISION=($image_context.revision)"
-                --tag $"($image_context.image):(image-tag $target $image_context.version)"
+                --tag $"($image_context.image):(image-tag $target $version)"
                 src/archlinux
         )
     }
@@ -278,7 +279,8 @@ def "main smoke" [requested: string = 'all'] {
     let source = (pwd)
 
     for variant in (variants $requested) {
-        smoke-image $image_context $variant $source
+        let version = (build-version $image_context.release $variant)
+        smoke-image ($image_context | insert version $version) $variant $source
     }
 }
 
@@ -366,7 +368,7 @@ def "main publish" [release_tag: string] {
     let expected = {
         image: $image_context.image
         variant: $image_context.release.variant
-        version: $image_context.version
+        version: $image_context.release.version
         revision: $image_context.revision
     }
 
