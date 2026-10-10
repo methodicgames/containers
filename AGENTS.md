@@ -51,9 +51,7 @@ relevant.
 
 ## Commits
 
-Obtain user approval for the exact staged state and message before
-creating a commit. A completed change does not authorize a commit or
-push.
+A completed change does not authorize a commit or push.
 
 ## Comments and Documentation
 
