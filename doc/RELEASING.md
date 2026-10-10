@@ -29,11 +29,12 @@ build-job number, not a package release number for downstream images.
 ## Prerequisites
 
 Prepare releases from a clean `main` worktree that exactly matches live
-`origin/main`. The release process requires Git, Just, Nushell, tar,
-rootless Podman, and network access. Creating the tag uses the
-configured SSH signing identity, whose public key must be listed in
-`.git-signers` on `main`. Publication requires registry authentication
-and runs through GitHub Actions in production.
+`origin/main`. The release process requires the validation toolchain
+described in [Contributing](../CONTRIBUTING.md#development-setup) and
+network access. Creating the tag uses the configured SSH signing
+identity, whose public key must be listed in `.git-signers` on `main`.
+Publication requires registry authentication and runs through GitHub
+Actions in production.
 
 To add, rotate, or revoke a release signer, change `.git-signers` in a
 reviewed commit on `main` before tagging. Publication reads the file
@@ -72,21 +73,25 @@ Create the next signed release tag locally with:
 just release archlinux/dev-2026.09.01-1
 ```
 
-The recipe checks that the worktree is clean and synchronized, the tag
-date matches `src/archlinux/VERSION`, and the selected variant's
-per-snapshot sequence starts at `1` and has no gaps. It creates a
-signed annotated tag, verifies it against `.git-signers`, and deletes
-it again if verification fails. On success, it prints the explicit push
-command; it never pushes the tag itself.
+The recipe creates the tag only when it satisfies the release checks
+below, and it prints the explicit push command rather than pushing the
+tag itself.
 
 ## Publish
 
 After reviewing the tag, push it using the command printed by
-`just release`. GitHub Actions independently validates its syntax,
-sequence, annotation, and ancestry from `origin/main`, and verifies its
-SSH signature against `.git-signers` on `origin/main`, before
-authenticating to GHCR. Pull requests and pushes to `main` validate but
-never publish.
+`just release`. Pull requests and pushes to `main` validate but never
+publish.
+
+Release creation and publication share one set of release checks,
+defined in `bin/containers.nu`. A release tag must be annotated, follow
+its variant's gap-free sequence for the current snapshot, target a
+commit on `origin/main`, and carry a signature from a key in
+`.git-signers` on `origin/main`. Builds with `RELEASE_TAG` set and
+publication also require a clean checkout of exactly the tagged commit,
+so a release image cannot record a version or revision that no trusted
+release tag identifies. The workflow applies these checks before
+authenticating to GHCR.
 
 The workflow publishes the selected variant's immutable release tag,
 date alias, and floating alias. Publication is serialized separately
@@ -171,13 +176,11 @@ commit ID; this command honors `IMAGE`.
 
 Keep production publication in the serialized release workflow. Manual
 `just publish` invocations require the original `RELEASE_TAG`, tagged
-`REVISION`, a clean checkout of that revision, a current `origin/main`,
-and registry authentication; they must not overlap a production
-publisher. Publication rejects a tag that is absent, lightweight,
-targets another commit, or lacks a signature from a key in
-`.git-signers` on `origin/main`. Test alternative registries through
-`IMAGE`. Plain HTTP is supported only for an explicit loopback host and
-port used by disposable tests.
+`REVISION`, a current `origin/main`, and registry authentication, and
+they pass the same [release checks](#publish) as the workflow; they
+must not overlap a production publisher. Test alternative registries
+through `IMAGE`. Plain HTTP is supported only for an explicit loopback
+host and port used by disposable tests.
 
 Historical workflow reruns execute historical code. Do not rerun
 releases created before the current publication protections were

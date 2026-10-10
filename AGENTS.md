@@ -28,8 +28,8 @@ relevant.
   merely to expand an item.
 - `/doc/SKILLS.md`: Project-specific skill overrides. When using a
   skill, read its matching section.
-- `/doc/PROJECT.md`: Dependency-update rules, repository setup
-  decisions, and deliberate project setup exceptions.
+- `/doc/PROJECT.md`: Dependency-update rules and deliberate project
+  setup exceptions.
 - `/doc/RELEASING.md`: Release and recovery procedures.
 - `/dst/`, `/.tmp/`, and `/scratch/`: Disposable generated and build
   output, non-output operational state, and exploratory material,

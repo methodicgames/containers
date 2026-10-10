@@ -22,15 +22,6 @@ SPDX-License-Identifier: 0BSD
 - Run `just validate` after every dependency update so the changed
   images are rebuilt and exercised by the complete acceptance gate.
 
-## Repository Decisions
-
-- `GIT-003`: Retain the established SHA-1 object format. The canonical
-  upstream and public references are already GitHub-hosted SHA-1
-  objects; rewriting them solely to prefer SHA-256 would break stable
-  commit and image trace references without improving current
-  interoperability. Reconsider only if the canonical host and required
-  integrations support a transition that preserves those references.
-
 ## Project Setup Exceptions
 
 - `LEGAL-005`: License all repository-authored source under 0BSD,

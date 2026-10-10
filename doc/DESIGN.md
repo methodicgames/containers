@@ -140,3 +140,12 @@ Repository-authored definitions, automation, and documentation use
 0BSD. Packages installed into images retain their own copyright and
 licensing terms; image labels and project documentation do not
 relicense them.
+
+### Git Object Format
+
+The repository retains the SHA-1 object format. The canonical upstream
+and public references are already GitHub-hosted SHA-1 objects;
+rewriting them solely to prefer SHA-256 would break stable commit and
+image trace references without improving current interoperability.
+Reconsider only if the canonical host and required integrations support
+a transition that preserves those references.

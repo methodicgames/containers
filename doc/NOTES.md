@@ -19,17 +19,12 @@ requires both.
 
 ## Version Identity
 
-The release tag model is described in
-[Design](DESIGN.md#version-and-tag-model).
-
-Published images use `YYYY.MM.DD-N` as their version and record the
-tagged Git commit as their revision. Unreleased local builds use
-`local` as their version and, unless `REVISION` is set, their revision.
-Publication requires `RELEASE_TAG`. Builds with `RELEASE_TAG` set and
-publication require a clean worktree whose `HEAD` is `REVISION`, and an
-annotated `RELEASE_TAG` that targets `REVISION` and is signed by a key
-in `.git-signers` on `origin/main`. A release image therefore cannot
-record a version or revision that no trusted release tag identifies.
+Image labels record a release version and source revision, but nothing
+in the image proves them. Release builds therefore accept those values
+only from the clean commit that a trusted release tag identifies;
+otherwise any checkout could produce an image claiming a release it is
+not. [Design](DESIGN.md#version-and-tag-model) describes the tag model,
+and [Releasing](RELEASING.md#publish) describes the enforced checks.
 
 ## Root Identity
 
