@@ -11,12 +11,18 @@ export def test-directory [suite: string] {
     $directory
 }
 
+# An error's own message and those of the errors nested inside it. Unlike the
+# rendered error, these are not wrapped and exclude quoted source code.
+def error-messages [details: record] {
+    [$details.msg] ++ ($details.inner | each {|inner| error-messages $inner } | flatten)
+}
+
 export def rejects [operation: closure, message: string] {
     let failure = try {
         do $operation
         null
     } catch {|err|
-        $err.rendered
+        error-messages $err.details | str join (char newline)
     }
 
     assert ($failure != null) $"expected failure: ($message)"
