@@ -54,7 +54,7 @@ release $release-tag:
 validate-release $release-tag:
     nu --no-config-file bin/containers.nu validate-release $env.release-tag
 
-# Build one variant, or all variants, with its local or release tag.
+# Build one variant or all variants, each with its local or release tag.
 build $variant="all":
     nu --no-config-file bin/containers.nu build $env.variant
 

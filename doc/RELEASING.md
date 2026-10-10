@@ -96,17 +96,17 @@ authenticating to GHCR.
 The workflow publishes the selected variant's immutable release tag,
 date alias, and floating alias. Publication is serialized separately
 for `base` and `dev`, including anonymous verification, and pending
-releases are queued. It grants registry-write permission only to the
-publication job. A job time limit ends a stalled publication, which can
-then be retried as described under [Recovery](#recovery).
+releases are queued. The workflow grants registry-write permission only
+to the publication job. A job time limit ends a stalled publication,
+which can then be retried as described under [Recovery](#recovery).
 
 `just publish archlinux/<variant>-YYYY.MM.DD-N` is the authenticated
 lower-level operation used by the release workflow. It acts on the
 variant that the release tag selects and requires `REVISION` containing
-the full tagged Git commit ID. Registry requests use skopeo, which
-finds the credentials written by `podman login` the same way Podman
-does, and ignore host registry mirrors and other `registries.conf`
-settings.
+the full tagged Git commit ID. Registry inspection and alias promotion
+use skopeo, which finds the credentials written by `podman login` the
+same way Podman does. These requests and anonymous verification pulls
+ignore host registry mirrors and other `registries.conf` settings.
 
 When the versioned image is absent, publication runs `just validate`,
 pushes the image once, and records its manifest digest. On retry, an
@@ -165,15 +165,16 @@ commit ID; this command honors `IMAGE`.
 Keep production publication in the serialized release workflow. Manual
 `just publish` invocations require the original release tag, tagged
 `REVISION`, a current `origin/main`, and registry authentication, and
-they pass the same [release checks](#publish) as the workflow; they
+they apply the same [release checks](#publish) as the workflow; they
 must not overlap a production publisher. Test alternative registries
 through `IMAGE`. Plain HTTP is supported only for an explicit loopback
 host and port used by disposable tests.
 
-Historical workflow reruns execute historical code. Do not rerun
-releases created before the current publication protections were
-introduced. If an old release needs repair, inspect its existing
-registry state and use the updated publication commands with its
-original snapshot and revision while production publication is
-quiescent. The newer commands do not rewrite old Git tags or disable
-old workflows. Never move a signed release tag.
+Rerunning a release workflow executes the workflow and automation from
+that release's tagged commit, not the current versions. Do not rerun a
+release whose tagged commit lacks the publication protections described
+here. If such a release needs repair, inspect its existing registry
+state and use the current publication commands with its original
+snapshot and revision while production publication is quiescent.
+Current commands do not rewrite old Git tags or disable old workflows.
+Never move a signed release tag.

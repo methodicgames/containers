@@ -57,8 +57,8 @@ rules.
 
 ### Hosted Publication
 
-Pull requests and relevant pushes to `main` run the canonical gate on
-the Actions runner with read-only repository permission. A matching
+Pull requests and pushes to `main` run the canonical gate on the
+Actions runner with read-only repository permission. A matching
 release-tag push starts the publication job, the only job with
 registry-write permission. It validates the variant's release sequence,
 signature, and ancestry before authenticating to GHCR. The signature
@@ -72,10 +72,11 @@ hours. The first successful versioned manifest is authoritative;
 retries validate its metadata and resume from that digest. Only a
 registry report that the release manifest is unknown allows an initial
 upload; skopeo does not reliably distinguish that case by exit status,
-so lookup matches its message. Registry access ignores host
-`registries.conf` settings, so a mirror cannot answer for the registry
-or mask its failure. Authentication failures, transport errors, and
-unrecognized messages stop work.
+so lookup matches its message. Registry lookups, alias promotion, and
+anonymous verification ignore host `registries.conf` settings, so a
+mirror cannot answer for the registry or mask its failure.
+Authentication failures, transport errors, and unrecognized messages
+stop work.
 
 Publication inspects both aliases before changing either. Date aliases
 advance by sequence within their date; floating aliases advance by date
@@ -90,10 +91,10 @@ releases also test the published digest as a GitHub Actions job
 container.
 
 These guarantees apply to cooperating publishers. Manual registry
-writes and historical workflow code do not acquire the new lock or obey
-the new policy. Production uses the updated workflow; exceptional
-manual recovery requires quiescent publication and the original release
-inputs.
+writes and workflow code that predates the publication lock do not
+acquire it or obey the current policy. Production uses the release
+workflow; exceptional manual recovery requires quiescent publication
+and the original release inputs.
 
 ## Source and Generated State
 
@@ -132,9 +133,9 @@ Git tag produces the exact immutable OCI tag.
 
 Publication creates three tag classes:
 
-- `VARIANT-YYYY.MM.DD-N` is the immutable release reference.
-- `VARIANT-YYYY.MM.DD` moves within one release date.
-- `VARIANT` is the moving convenience alias.
+- `<variant>-YYYY.MM.DD-N` is the immutable release reference.
+- `<variant>-YYYY.MM.DD` moves within one release date.
+- `<variant>` is the moving convenience alias.
 
 The Git release tag and OCI revision label trace an image to source.
 Consumers pin OCI manifest digests when tag mutability is unacceptable.
