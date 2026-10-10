@@ -39,13 +39,11 @@ uses the proposed `dev` image's pinned toolchain for source and
 static-analysis checks. This makes the image pair one acceptance unit
 and keeps local and hosted validation equivalent. Publication is the
 only repository command that changes an external registry and requires
-prior authentication. Initial publication depends on that gate;
-recovery validates the already published release digest and smoke-tests
-it using the recorded Git revision's source, without rebuilding it.
-Historical source runs only its smoke recipe; current publication code
-retains control of all registry writes. Publication policy tests use an
-injected backend, and integration tests exercise real manifests against
-a disposable rootless registry through the same policy.
+prior authentication. Initial publication depends on that gate; a retry
+validates the already published release digest and smoke-tests it
+without rebuilding it. Publication policy tests use an injected
+backend, and integration tests exercise real manifests against a
+disposable rootless registry through the same policy.
 
 Version parsing takes explicit input; matching a release to the current
 snapshot is a separate check. Command orchestration captures image and

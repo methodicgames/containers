@@ -304,7 +304,7 @@ def "main smoke-release" [release_tag: string, revision: string] {
     ^git archive --format=tar --output $archive $revision
     ^tar --extract --file $archive --directory $source
 
-    # Only the historical smoke recipe runs here. Registry writes remain current.
+    # Only the historical smoke recipe runs here.
     with-env {RELEASE_TAG: $release.tag, REVISION: $revision} {
         cd $source
         ^just smoke $release.variant
@@ -401,7 +401,8 @@ def "main publish" [release_tag: string] {
                 ^podman pull --tls-verify=(not $client.loopback) $reference
             }
             ^podman tag $reference $"($image_context.image):(image-tag $artifact.variant $artifact.version)"
-            ^just smoke-release $image_context.release.tag $artifact.revision
+            # The checkout is the artifact's revision, so its own checks apply.
+            smoke-image $image_context $artifact.variant (pwd)
         }
         promote: {|tag, artifact| promote-manifest $client $tag $artifact }
         verify: {|tag, digest| anonymous-verify $image_context.image $tag $digest }

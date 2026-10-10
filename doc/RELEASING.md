@@ -149,19 +149,18 @@ conflicting aliases fail the check.
 
 A partial publication failure can be retried with the same inputs. A
 retry reuses the first published release digest after validating its
-metadata and smoke-testing the image against its recorded source
-revision. It advances only aliases that are absent or older and
-verifies all selected digests anonymously. An existing equal-version
-digest conflict is an error, not permission to overwrite an image.
+metadata and smoke-testing it. It advances only aliases that are absent
+or older and verifies all selected digests anonymously. An existing
+equal-version digest conflict is an error, not permission to overwrite
+an image.
 
-The recorded Git commit must be available locally. Publication exports
-that revision beneath `.tmp/release-smoke/` and runs only its
-`just smoke` recipe, so later tool additions do not invalidate an older
-image. Current publication code still controls registry inspection,
-alias updates, and anonymous verification. To test a locally available
-release image independently, run
+To smoke-test a locally available release image with the checks from
+its own tagged commit, run
 `just smoke-release RELEASE_TAG TAGGED_COMMIT` with its full tagged
-commit ID; this command honors `IMAGE`.
+commit ID. The command exports that commit beneath
+`.tmp/release-smoke/` and runs only its `just smoke` recipe, so checks
+added later do not fail an older image. The commit must be available
+locally, and the command honors `IMAGE`.
 
 Keep production publication in the serialized release workflow. Manual
 `just publish` invocations require the original release tag, tagged
