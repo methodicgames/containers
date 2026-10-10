@@ -92,8 +92,9 @@ container.
 These guarantees apply to cooperating publishers. Manual registry
 writes and workflow code that predates the publication lock do not
 acquire it or obey the current policy. Production uses the release
-workflow; exceptional manual recovery requires quiescent publication
-and the original release inputs.
+workflow. A failed publication is rerun only when its tagged
+publication code matches `main`; otherwise a newer release supersedes
+it. Manual registry intervention requires quiescent publication.
 
 ## Source and Generated State
 

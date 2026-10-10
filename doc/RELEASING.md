@@ -172,10 +172,19 @@ through `IMAGE`. Plain HTTP is supported only for an explicit loopback
 host and port used by disposable tests.
 
 Rerunning a release workflow executes the workflow and automation from
-that release's tagged commit, not the current versions. Do not rerun a
-release whose tagged commit lacks the publication protections described
-here. If such a release needs repair, inspect its existing registry
-state and use the current publication commands with its original
-snapshot and revision while production publication is quiescent.
-Current commands do not rewrite old Git tags or disable old workflows.
-Never move a signed release tag.
+that release's tagged commit, not the current versions. Rerun a failed
+publication only when its tagged publication code matches the current
+`origin/main`; after fetching `origin`, this command exits successfully
+in that case:
+
+```sh
+git diff --quiet RELEASE_TAG origin/main -- .github/workflows/release.yaml justfile bin/
+```
+
+Otherwise, do not rerun or manually repair the failed release. Create
+the variant's next release from the current `main` as described under
+[Prepare](#prepare); its publication advances the aliases past the
+failed release, whose immutable tag keeps whatever state it reached.
+Never move a signed release tag or overwrite a published image. If a
+registry conflict also blocks the new release, resolving it requires a
+manual registry write while production publication is quiescent.
