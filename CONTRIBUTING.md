@@ -126,11 +126,12 @@ before committing. Text files end with exactly one newline.
   `just lint` checks it.
 - Just uses its built-in formatter; both quality commands invoke it in
   the appropriate write or check mode.
-- GitHub Actions YAML uses actionlint through `just lint`. The pinned
-  tool does not recognize GitHub's `concurrency.queue` property yet.
-  The invocation excludes only that exact unknown-key diagnostic; a
-  `CHECK:` comment records its removal condition and the upstream
-  actionlint issue.
+- GitHub Actions YAML uses actionlint with `.github/actionlint.yaml`
+  through `just lint`. The pinned tool does not recognize GitHub's
+  `concurrency.queue` property yet. The configuration excludes only
+  that exact unknown-key diagnostic in the release workflow; a `CHECK:`
+  comment records its removal condition and the upstream actionlint
+  issue.
 - Nushell has no separate formatter or linter selected. Loading
   `bin/containers.nu` exercises the Nushell parser, and the public
   commands provide behavioral validation. No suitable Nushell-specific

@@ -234,9 +234,7 @@ def "main lint" [] {
         ^rumdl check --no-cache ...$markdown
     }
     ^reuse --no-multiprocessing lint
-    # CHECK: Remove this exact diagnostic exception when actionlint supports queue.
-    # https://github.com/rhysd/actionlint/issues/657
-    ^actionlint -ignore '^unexpected key "queue" for "concurrency" section[.] expected one of "cancel-in-progress", "group"$'
+    ^actionlint
 }
 
 def "main clean" [] {
