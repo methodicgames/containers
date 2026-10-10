@@ -14,6 +14,7 @@ SPDX-License-Identifier: 0BSD
 - `src/archlinux/VERSION` owns the Arch Archive snapshot date.
 - `justfile` owns the public automation interface.
 - `bin/containers.nu` coordinates repository automation.
+- `bin/diagnostics.nu` owns command-ending failure reporting.
 - `bin/versions.nu` owns snapshot, version, and release-tag parsing.
 - `bin/releases.nu` owns release-tag trust: creation, sequence,
   ancestry, signature, and release-source checks.

@@ -3,21 +3,17 @@
 
 # Release trust: whether a release tag may be created, published, or built.
 # Tag creation, the release workflow, release builds, and manual publication
-# all apply these checks. Callers match the release to VERSION separately.
+# all apply these checks, and a rejection ends the command. Callers match the
+# release to VERSION separately.
 
+use diagnostics.nu fail
 use versions.nu *
 
 const trusted_ref = 'refs/remotes/origin/main'
 
-# A rejected release ends the command with a one-line diagnostic.
-def reject [message: string] {
-    print --stderr $"error: ($message)"
-    exit 1
-}
-
 def require-clean-worktree [subject: string] {
     if not (^git status --porcelain | str trim | is-empty) {
-        reject $"($subject) require a clean worktree"
+        fail $"($subject) require a clean worktree"
     }
 }
 
@@ -30,7 +26,7 @@ def ls-remote [options: list<string>, pattern: string] {
     let result = (^git ls-remote ...$options origin $pattern | complete)
     if $result.exit_code != 0 {
         print --stderr ($result.stderr | str trim)
-        reject 'cannot read origin'
+        fail 'cannot read origin'
     }
 
     $result.stdout
@@ -78,20 +74,20 @@ export def create-release-tag [release: record] {
     require-clean-worktree 'release tags'
     let branch = (^git symbolic-ref --quiet --short HEAD | complete)
     if $branch.exit_code != 0 or ($branch.stdout | str trim) != 'main' {
-        reject 'release tags must be created from the main branch'
+        fail 'release tags must be created from the main branch'
     }
 
     let remote_main = (ls-remote ['--heads'] refs/heads/main)
     if ($remote_main | is-empty) {
-        reject 'origin/main is unavailable'
+        fail 'origin/main is unavailable'
     }
     if (^git rev-parse HEAD | str trim) != $remote_main.0.revision {
-        reject 'main must exactly match origin/main before creating a release tag'
+        fail 'main must exactly match origin/main before creating a release tag'
     }
 
     let tag_ref = $"refs/tags/($release.tag)"
     if (^git show-ref --verify --quiet $tag_ref | complete).exit_code == 0 {
-        reject $"release tag ($release.tag) already exists locally"
+        fail $"release tag ($release.tag) already exists locally"
     }
     let published = (
         ls-remote ['--tags' '--refs'] $"refs/tags/(series-pattern $release)"
@@ -102,7 +98,7 @@ export def create-release-tag [release: record] {
         (validate-release-sequence $release.variant $release.date $published | length) + 1
     )
     if $release.sequence != $expected {
-        reject $"next release for ($release.variant) on ($release.date) must be archlinux/($release.variant)-($release.date)-($expected)"
+        fail $"next release for ($release.variant) on ($release.date) must be archlinux/($release.variant)-($release.date)-($expected)"
     }
 
     ^git tag --sign --annotate $release.tag --message $"Release ($release.version)"
@@ -110,7 +106,7 @@ export def create-release-tag [release: record] {
     let problem = (signature-problem $tag_ref HEAD)
     if $problem != null {
         ^git tag --delete $release.tag | ignore
-        reject $problem
+        fail $problem
     }
 }
 
@@ -119,10 +115,10 @@ export def create-release-tag [release: record] {
 export def check-pushed-release [release: record] {
     let tag_ref = $"refs/tags/($release.tag)"
     if (^git show-ref --verify --quiet $tag_ref | complete).exit_code != 0 {
-        reject $"release tag ($release.tag) is not present"
+        fail $"release tag ($release.tag) is not present"
     }
     if (^git cat-file -t $tag_ref | str trim) != 'tag' {
-        reject $"release tag ($release.tag) must be annotated"
+        fail $"release tag ($release.tag) must be annotated"
     }
 
     let series = (^git tag --list (series-pattern $release) | lines)
@@ -130,11 +126,11 @@ export def check-pushed-release [release: record] {
 
     let revision = (^git rev-list -n 1 $tag_ref | str trim)
     if (^git merge-base --is-ancestor $revision $trusted_ref | complete).exit_code != 0 {
-        reject $"release tag ($release.tag) does not target a commit on origin/main"
+        fail $"release tag ($release.tag) does not target a commit on origin/main"
     }
     let problem = (signature-problem $tag_ref $trusted_ref)
     if $problem != null {
-        reject $problem
+        fail $problem
     }
 
     $revision
@@ -145,9 +141,9 @@ export def check-pushed-release [release: record] {
 export def check-release-source [release: record, revision: string] {
     require-clean-worktree 'release builds'
     if $revision != (^git rev-parse HEAD | str trim) {
-        reject 'release builds require REVISION to be the checked-out commit'
+        fail 'release builds require REVISION to be the checked-out commit'
     }
     if (check-pushed-release $release) != $revision {
-        reject $"release tag ($release.tag) does not target REVISION"
+        fail $"release tag ($release.tag) does not target REVISION"
     }
 }

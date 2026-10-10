@@ -2,16 +2,12 @@
 # SPDX-FileCopyrightText: 2026 Methodic Games LLC
 # SPDX-License-Identifier: 0BSD
 
+use diagnostics.nu fail
 use publication.nu *
 use registry.nu *
 use releases.nu *
 use versions.nu *
 use smoke.nu smoke-image
-
-def fail [message: string, code: int = 1] {
-    print --stderr $"error: ($message)"
-    exit $code
-}
 
 def variants [requested: string] {
     if $requested == 'all' {
