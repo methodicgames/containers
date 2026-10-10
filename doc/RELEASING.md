@@ -102,15 +102,9 @@ publication job.
 `just publish archlinux/<variant>-YYYY.MM.DD-N` is the authenticated
 lower-level operation used by the release workflow. It acts on the
 variant that the release tag selects and requires `REVISION` containing
-the full tagged Git commit ID. Registry requests use the credentials
-written by `podman login`. `REGISTRY_AUTH_FILE` takes precedence over
-`DOCKER_CONFIG`; either selects an exclusive file. Otherwise, lookup
-checks the runtime auth file, then
-`XDG_CONFIG_HOME/containers/auth.json` (defaulting to
-`~/.config/containers/auth.json`), then `~/.docker/config.json`. The
-registry client supports basic authentication and bearer tokens issued
-over HTTPS by the registry host, including GHCR. Credential helpers and
-cross-host authentication services are not supported.
+the full tagged Git commit ID. Registry requests use skopeo, which
+finds the credentials written by `podman login` the same way Podman
+does.
 
 When the versioned image is absent, publication runs `just validate`,
 pushes the image once, and records its manifest digest. On retry, an
@@ -142,11 +136,11 @@ just smoke-published archlinux/dev-2026.09.01-1
 ```
 
 Use a release whose date matches the current `src/archlinux/VERSION`.
-The check requires rootless Podman and network access, honors `IMAGE`,
-and writes an empty registry-authentication file beneath `.tmp/`. It
-accepts an alias at a newer release only when that alias matches its
-own immutable release digest. Missing, older, or conflicting aliases
-fail the check.
+The check requires rootless Podman, skopeo, and network access, honors
+`IMAGE`, and writes an empty registry-authentication file beneath
+`.tmp/`. It accepts an alias at a newer release only when that alias
+matches its own immutable release digest. Missing, older, or
+conflicting aliases fail the check.
 
 ## Recovery
 

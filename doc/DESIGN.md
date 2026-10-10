@@ -19,7 +19,7 @@ SPDX-License-Identifier: 0BSD
 - `bin/releases.nu` owns release-tag trust: creation, sequence,
   ancestry, signature, and release-source checks.
 - `bin/publication.nu` owns publication and alias policy.
-- `bin/registry.nu` owns registry authentication and transport.
+- `bin/registry.nu` owns registry access through skopeo.
 - `bin/smoke.nu` orchestrates image checks; `bin/runtime-checks.nu`
   runs tool and package checks inside an image.
 - `tests/` owns named automation scenarios and their fixtures.
@@ -68,9 +68,11 @@ account has registered, and removing a key there revokes it for later
 publication runs. Publication is serialized per variant across snapshot
 dates, with queued runs and no cancellation of an active publisher. The
 first successful versioned manifest is authoritative; retries validate
-its metadata and resume from that digest. Only a structured
-missing-manifest response allows an initial upload. Authentication
-failures and transport errors stop work.
+its metadata and resume from that digest. Only a registry report that
+the release manifest is unknown allows an initial upload; skopeo does
+not reliably distinguish that case by exit status, so lookup matches
+its message. Authentication failures, transport errors, and
+unrecognized messages stop work.
 
 Publication inspects both aliases before changing either. Date aliases
 advance by sequence within their date; floating aliases advance by date

@@ -174,7 +174,6 @@ def authentication [source_image: string, directory: path] {
 
         with-env {REGISTRY_AUTH_FILE: $authfile} {
             let client = (registry-context $image)
-            assert ($client.basic_auth != '') 'Podman login credentials were not loaded'
             assert equal (lookup-artifact $client 'base-2026.09.01-2') null
 
             (
@@ -188,10 +187,15 @@ def authentication [source_image: string, directory: path] {
 
             rejects {
                 lookup-artifact (registry-context $image --anonymous) 'base'
-            } 'registry requires credentials'
+            } 'authentication required'
+        }
 
-            let wrong = ($client | update basic_auth ('tester:incorrect' | encode base64))
-            rejects { lookup-artifact $wrong 'base' } 'HTTP 401'
+        let wrong = ($authdir | path join 'wrong.json')
+        {auths: {$binding: {auth: ('tester:incorrect' | encode base64)}}} | to json | save $wrong
+        with-env {REGISTRY_AUTH_FILE: $wrong} {
+            rejects {
+                lookup-artifact (registry-context $image) 'base'
+            } 'authentication required'
         }
     }
 }
