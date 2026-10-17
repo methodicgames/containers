@@ -1,0 +1,150 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
+# Host-side image checks. Call through the public Just recipes.
+
+use versions.nu [build-version image-tag parse-snapshot]
+
+# Images inherit upstream labels; new upstream OCI labels must be reviewed.
+const oci_labels = [
+    'org.opencontainers.image.authors'
+    'org.opencontainers.image.created'
+    'org.opencontainers.image.description'
+    'org.opencontainers.image.documentation'
+    'org.opencontainers.image.licenses'
+    'org.opencontainers.image.revision'
+    'org.opencontainers.image.source'
+    'org.opencontainers.image.title'
+    'org.opencontainers.image.url'
+    'org.opencontainers.image.version'
+]
+
+const replaced_labels = {
+    'org.opencontainers.image.authors': 'Methodic Games LLC'
+    'org.opencontainers.image.licenses': 'NOASSERTION'
+    'org.opencontainers.image.url': 'https://github.com/methodicgames/containers'
+}
+
+def run-image-check [image_ref: string, command: list<string>, failure: string] {
+    let result = (^podman run --rm $image_ref ...$command | complete)
+    if $result.exit_code != 0 {
+        error make {msg: $"($failure): ($result.stderr | str trim)"}
+    }
+
+    $result.stdout | str trim
+}
+
+def check-root [image_ref: string] {
+    let uid = (run-image-check $image_ref ['id' '-u'] 'cannot check container identity')
+    if $uid != '0' {
+        error make {msg: $"($image_ref) does not run as root"}
+    }
+}
+
+def check-mirror [image_ref: string, snapshot: string] {
+    let snapshot_path = (parse-snapshot $snapshot).path
+    let expected = $"Server = https://archive.archlinux.org/repos/($snapshot_path)/$repo/os/$arch"
+
+    run-image-check $image_ref [
+        'grep' '-Fxq' $expected '/etc/pacman.d/mirrorlist'
+    ] $"($image_ref) does not use the expected Archive mirror" | ignore
+}
+
+def check-package-state [image_ref: string] {
+    let cache_entry = (run-image-check $image_ref [
+        'find' '/var/cache/pacman/pkg' '-mindepth' '1' '-print' '-quit'
+    ] $"($image_ref) cannot inspect its package cache")
+    if $cache_entry != '' {
+        error make {msg: $"($image_ref) package cache is not empty"}
+    }
+
+    let sync_database = (run-image-check $image_ref [
+        'find' '/var/lib/pacman/sync' '-maxdepth' '1' '-name' '*.db' '-print' '-quit'
+    ] $"($image_ref) cannot inspect its package sync database")
+    if $sync_database == '' {
+        error make {msg: $"($image_ref) has no active package sync database"}
+    }
+}
+
+def check-image-metadata [image_ref: string, variant: string, version: string, revision: string] {
+    let details = (^podman image inspect $image_ref | from json | first)
+    let labels = $details.Labels
+
+    if $details.Architecture != 'amd64' {
+        error make {msg: $"($image_ref) has an unexpected architecture"}
+    }
+    if ($labels | get 'games.methodic.containers.variant') != $variant {
+        error make {msg: $"($image_ref) has an unexpected variant label"}
+    }
+    if ($labels | get 'org.opencontainers.image.version') != $version {
+        error make {msg: $"($image_ref) has an unexpected version label"}
+    }
+    if ($labels | get 'org.opencontainers.image.revision') != $revision {
+        error make {msg: $"($image_ref) has an unexpected revision label"}
+    }
+    if ($labels | get 'org.opencontainers.image.source') != 'https://github.com/methodicgames/containers' {
+        error make {msg: $"($image_ref) has an unexpected source label"}
+    }
+    let created = ($labels | get -o 'org.opencontainers.image.created' | default '')
+    if not ($created =~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$') {
+        error make {msg: $"($image_ref) has no UTC build-time created label"}
+    }
+
+    let unreviewed = (
+        $labels
+        | columns
+        | where {|label|
+                ($label starts-with 'org.opencontainers.image.') and ($label not-in $oci_labels)
+            }
+    )
+    if not ($unreviewed | is-empty) {
+        error make {msg: $"($image_ref) has unreviewed labels: ($unreviewed | str join ', ')"}
+    }
+    for label in ($replaced_labels | transpose name value) {
+        if ($labels | get -o $label.name) != $label.value {
+            error make {msg: $"($image_ref) does not replace upstream label ($label.name)"}
+        }
+    }
+}
+
+def run-with-source [image_ref: string, source: path, command: list<string>] {
+    (
+        ^podman run --rm
+            --volume $"($source):/src:ro"
+            --workdir /src
+            $image_ref ...$command
+    )
+}
+
+def check-tool-store [image_ref: string] {
+    let archive = (run-image-check $image_ref [
+        'find' '/root/.dotnet/tools/.store' '-name' '*.nupkg' '-print' '-quit'
+    ] $"($image_ref) cannot inspect its .NET tool store")
+    if $archive != '' {
+        error make {msg: $"($image_ref) retains .NET tool package archives"}
+    }
+}
+
+def check-development-image [image_ref: string, source: path] {
+    check-tool-store $image_ref
+    run-with-source $image_ref $source [
+        'nu' '--no-config-file' 'bin/runtime-checks.nu' 'dev'
+    ]
+    run-with-source $image_ref $source ['just' 'smoke-job']
+    run-with-source $image_ref $source ['reuse' 'lint']
+}
+
+# Context supplies image, release, revision, and snapshot; source is the repo root.
+export def smoke-image [image_context: record, variant: string, source: path] {
+    let version = (build-version $image_context.release $variant)
+    let image_ref = $"($image_context.image):(image-tag $variant $version)"
+
+    check-root $image_ref
+    check-mirror $image_ref $image_context.snapshot
+    check-package-state $image_ref
+    check-image-metadata $image_ref $variant $version $image_context.revision
+
+    if $variant == 'dev' {
+        check-development-image $image_ref $source
+    }
+}

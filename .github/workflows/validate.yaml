@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        shell: nu {0}
+    env:
+      REVISION: ${{ github.sha }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Install Nushell
+        uses: hustcer/setup-nu@95cd3bfe252450ef7d35dd9a7ddecf3484341134 # v3.28
+        with:
+          version: "0.116.1"
+
+      - name: Install Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+        with:
+          just-version: "1.59.0"
+
+      - name: Check Out Source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate
+        run: just validate

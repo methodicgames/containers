@@ -1,0 +1,74 @@
+<!--
+SPDX-FileCopyrightText: 2026 Methodic Games LLC
+SPDX-License-Identifier: 0BSD
+-->
+
+# Notes
+
+## Selecting an Arch Snapshot
+
+The final numeric component in an upstream Arch image tag is the
+upstream GitLab build-job number, not a downstream package or image
+release. Select the upstream image first, then use the earliest Archive
+snapshot on or after its embedded date that completes `pacman -Syyuu`
+without downgrading installed packages.
+
+The image digest fixes the starting filesystem; the Archive date fixes
+the package repositories used during the build. Reproducibility
+requires both.
+
+## Version Identity
+
+Image labels record a release version and source revision, but nothing
+in the image proves them. Release builds therefore accept those values
+only from the clean commit that a trusted release tag identifies;
+otherwise any checkout could produce an image claiming a release it is
+not. [Design](DESIGN.md#version-and-tag-model) describes the tag model,
+and [Releasing](RELEASING.md#publish) describes the enforced checks.
+
+## Root Identity
+
+Container root is required by package tooling and GitHub Actions job
+containers. With rootless Podman, it maps through the invoking user's
+user namespace and does not grant host root privileges.
+
+## Inherited Image Labels
+
+Derived images inherit every label from the upstream Arch image unless
+the Containerfile overrides it. Upstream sets OCI `authors`, `created`,
+`licenses`, and `url` labels that describe Arch's image build,
+including the license of its build scripts. The base stage replaces
+them so image metadata neither misattributes the image nor declares one
+license for its installed software. Smoke tests reject any other OCI
+label that upstream adds until it has been reviewed.
+
+`licenses` is `NOASSERTION`: the image makes no license claim for the
+installed software. SPDX defines that value for license fields, but it
+is not part of the license-expression grammar that OCI cites. The build
+recipe sets `created` to the UTC build time as a command-line label,
+which applies only to the final stage and so leaves the layer cache
+intact. Publication pushes each release once, so its value records when
+that release was built.
+
+## Public Versus Interactive Tools
+
+The `dev` image contains tools needed for builds and non-interactive
+jobs. It intentionally omits `npm`, pagers, manual pages, shell
+completion, file finders, and other tools expected to remain the host's
+responsibility. `tmux` is included as a job tool for driving terminal
+programs, not as host-oriented interactive tooling. Smoke tests enforce
+both the required and intentionally absent inventories.
+
+## Emscripten Command Path
+
+Arch's Emscripten package supplies `/etc/profile.d/emscripten.sh` to
+append its tools directory to `PATH`. Direct container commands and
+non-login shells do not automatically source that script.
+
+The development image sources the packaged script during its build,
+links the resulting tools directory at `/usr/local/lib/emscripten`, and
+adds that stable path to the image environment. Package updates that
+move the tools directory therefore follow the package's profile without
+requiring a source change. The build checks that the profile appends
+exactly one directory containing an executable `emcc`; a change to that
+contract fails the build for review.

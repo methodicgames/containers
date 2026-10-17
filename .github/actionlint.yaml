@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
+# CHECK: Reconsider actionlint if it remains unmaintained, since unsupported
+# workflow syntax then needs lasting exceptions here.
+# https://github.com/rhysd/actionlint/issues/719
+
+self-hosted-runner:
+  labels:
+    # CHECK: Remove this GitHub-hosted runner label when actionlint supports
+    # it. https://github.com/rhysd/actionlint/issues/682
+    - ubuntu-26.04
+
+paths:
+  .github/workflows/release.yaml:
+    ignore:
+      # CHECK: Remove this exact diagnostic exception when actionlint supports
+      # queue. https://github.com/rhysd/actionlint/issues/657
+      - '^unexpected key "queue" for "concurrency" section[.] expected one of "cancel-in-progress", "group"$'

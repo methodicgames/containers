@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
+* text=auto
+*.md text eol=lf
+*.nu text eol=lf
+*.toml text eol=lf

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
+# Generated and build output
+/dst/
+
+# Repository-local operational state
+/.tmp/
+
+# Disposable exploration
+/scratch/

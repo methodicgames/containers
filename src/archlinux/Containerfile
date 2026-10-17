@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2026 Methodic Games LLC
+# SPDX-License-Identifier: 0BSD
+
+ARG ARCH_IMAGE=docker.io/archlinux/archlinux:base-20261015.0.611587@sha256:9a795bf1385c5ecde776c2d8355d7e290350b49a24f85fe20f392c1e25b18eb3
+
+FROM ${ARCH_IMAGE} AS base
+
+ARG VERSION=unknown
+ARG REVISION=unknown
+
+LABEL org.opencontainers.image.title="Methodic Games Arch Linux base"
+LABEL org.opencontainers.image.description="Snapshot-pinned minimal Arch Linux environment"
+LABEL org.opencontainers.image.source="https://github.com/methodicgames/containers"
+LABEL org.opencontainers.image.documentation="https://github.com/methodicgames/containers#usage"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${REVISION}"
+LABEL games.methodic.containers.variant="base"
+# Replace upstream image metadata; installed software keeps its own licenses.
+LABEL org.opencontainers.image.authors="Methodic Games LLC"
+LABEL org.opencontainers.image.url="https://github.com/methodicgames/containers"
+LABEL org.opencontainers.image.licenses="NOASSERTION"
+# The build recipe stamps the final image with its build time.
+LABEL org.opencontainers.image.created=""
+
+USER root
+
+RUN printf '%s\n' \
+        'Server = https://archive.archlinux.org/repos/2026/10/15/$repo/os/$arch' \
+        > /etc/pacman.d/mirrorlist \
+    && pacman -Syyuu --noconfirm \
+    && printf 'y\ny\n' | pacman -Scc
+
+FROM base AS dev
+
+LABEL org.opencontainers.image.title="Methodic Games Arch Linux development"
+LABEL org.opencontainers.image.description="Arch Linux build environment for development and Actions jobs"
+LABEL games.methodic.containers.variant="dev"
+
+RUN pacman -S --needed --noconfirm \
+        7zip \
+        actionlint \
+        b3sum \
+        base-devel \
+        biome \
+        c3c \
+        ca-certificates \
+        check-jsonschema \
+        clang \
+        curl \
+        dotnet-sdk-10.0 \
+        emscripten \
+        git \
+        git-lfs \
+        github-cli \
+        jq \
+        just \
+        nodejs \
+        nushell \
+        nvchecker \
+        openssh \
+        reuse \
+        rumdl \
+        tar \
+        tea \
+        tmux \
+        unzip \
+        zip \
+        zstd \
+    && git lfs install --system --skip-smudge --skip-repo \
+    && printf 'y\ny\n' | pacman -Scc
+
+# Installed tools do not read the package archives retained in their store.
+RUN dotnet tool install --global JetBrains.dotCover.CommandLineTools --version 2026.2.3.1 \
+    && dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.3.1 \
+    && dotnet tool install --global JetBrains.dotTrace.GlobalTools --version 2026.2.3.1 \
+    && dotnet tool install --global JetBrains.Refasmer.CliTool --version 2.0.3 \
+    && find /root/.dotnet/tools/.store -name '*.nupkg' -delete
+
+# Derive the tools directory from the package profile for non-login processes.
+RUN original_path="$PATH" \
+    && . /etc/profile.d/emscripten.sh \
+    && emscripten_path="${PATH#"$original_path":}" \
+    && test "$emscripten_path" != "$PATH" \
+    && test "${emscripten_path#*:}" = "$emscripten_path" \
+    && test -x "$emscripten_path/emcc" \
+    && mkdir -p /usr/local/lib \
+    && ln -s "$emscripten_path" /usr/local/lib/emscripten
+
+ENV PATH="${PATH}:/usr/local/lib/emscripten:/root/.dotnet/tools"
